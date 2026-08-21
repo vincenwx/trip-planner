@@ -881,7 +881,8 @@ function aiScan(force){
   ]
  };
  var tryModel=function(idx){
-  body.model=['deepseek-v4-flash','deepseek-chat'][idx];
+  body.model=['deepseek-v4-flash','deepseek-v4-pro'][idx];
+  body.thinking={type:'disabled'};
   return fetch('https://api.deepseek.com/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+dsKey},body:JSON.stringify(body)})
   .then(function(r){if(!r.ok){if(idx===0&&r.status===400)return tryModel(1);throw new Error('HTTP '+r.status);}return r.json();});
  };
@@ -954,7 +955,8 @@ function aiPoiDetail(name,poi){
   messages:[{role:'system',content:'你是亲子旅行讲解员,只输出 JSON,不要任何额外文字。'},
    {role:'user',content:'景点:'+name+'(类别:'+cat+')。已知简介:'+info+'\n请写给 '+META.kidAge+' 岁孩子的深度讲解,输出 JSON 对象:{"story":"背景故事,2-3句","see":["看点1","看点2","看点3"],"fact":"一条冷知识","think":"一个进阶开放问题"}。要求:史实准确不编造;每条15-40字;口语化,禁用"魅力""底蕴""震撼"这类词;see 是到现场具体看什么;think 要开放且与该点强相关。'}]};
  var tryM=function(idx){
-  body0.model=['deepseek-v4-flash','deepseek-chat'][idx];
+  body0.model=['deepseek-v4-flash','deepseek-v4-pro'][idx];
+  body0.thinking={type:'disabled'};
   return fetch('https://api.deepseek.com/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+dsKey},body:JSON.stringify(body0)})
   .then(function(r){if(!r.ok){if(idx===0&&r.status===400)return tryM(1);throw new Error('HTTP '+r.status);}return r.json();});
  };
@@ -977,16 +979,23 @@ function dsJSON(userPrompt,opts){
  opts=opts||{};
  var key=load('ta-ds-key','');
  var body0={temperature:opts.temp||0.3,response_format:{type:'json_object'},max_tokens:opts.maxTokens||4000,
+  thinking:{type:'disabled'},
   messages:[{role:'system',content:opts.sys||'你是亲子旅行规划师,只输出 JSON。'},{role:'user',content:userPrompt}]};
  var attempt=function(idx,left){
   var body=JSON.parse(JSON.stringify(body0));
-  body.model=['deepseek-v4-flash','deepseek-chat'][idx];
+  body.model=['deepseek-v4-flash','deepseek-v4-pro'][idx];
   return fetch('https://api.deepseek.com/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},body:JSON.stringify(body)})
   .then(function(r){
-   if(!r.ok){if(idx===0&&r.status===400)return attempt(1,left);throw new Error('HTTP '+r.status);}
+   if(!r.ok){
+    if(idx===0&&r.status===400)return attempt(1,left);
+    return r.text().then(function(t){throw new Error('HTTP '+r.status+(t?' · '+t.slice(0,300):''));});
+   }
    return r.json();
   }).then(function(j){
-   var txt=j.choices&&j.choices[0]&&j.choices[0].message&&j.choices[0].message.content;
+   var c=j.choices&&j.choices[0];
+   var txt=c&&c.message&&c.message.content;
+   if(!txt)throw new Error('接口返回为空');
+   if(c.finish_reason==='length')throw new Error('回答被截断(输出额度不足)');
    return JSON.parse(txt);
   }).catch(function(e){
    if(left>1)return attempt(0,left-1);
@@ -1092,10 +1101,10 @@ function skelCheck(s){
 function genSkeleton(){
  if(!PLANNER||!PLANNER.req)return Promise.reject(new Error('先填需求'));
  wizErr=null;
- return dsJSON(skelPrompt(PLANNER.req,null),{maxTokens:8000}).then(function(s){
+ return dsJSON(skelPrompt(PLANNER.req,null),{maxTokens:16000}).then(function(s){
   var err=skelCheck(s);
   if(!err)return s;
-  return dsJSON(skelPrompt(PLANNER.req,err),{maxTokens:8000}).then(function(s2){
+  return dsJSON(skelPrompt(PLANNER.req,err),{maxTokens:16000}).then(function(s2){
    var err2=skelCheck(s2);
    if(err2)throw new Error('骨架结构不合格:'+err2);
    return s2;
@@ -1114,7 +1123,7 @@ function skelRevise(text){
  var p='这是当前行程方案的完整 JSON:\n'+JSON.stringify(PLANNER.skeleton)+'\n\n'
   +'用户修改意见:'+text+'\n'
   +'请按修改意见调整(没提到的部分保持不变),重新输出完整的同结构 JSON,只输出 JSON,不要任何额外文字。';
- return dsJSON(p,{maxTokens:8000}).then(function(s){
+ return dsJSON(p,{maxTokens:16000}).then(function(s){
   var err=skelCheck(s);
   if(err)throw new Error('修改后的结果不合格:'+err);
   PLANNER.skeleton=s;wizErr=null;
