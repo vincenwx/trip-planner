@@ -127,7 +127,8 @@ function validateTrip(pack){
     const tag='pois['+i+']'+(pt&&pt.name?'('+pt.name+')':'');
     if(!pt||typeof pt!=='object'){E(tag+' 不是对象');return;}
     poiNames.push(pt.name);
-    if(typeof pt.day!=='string'||!/^D\d+$/.test(pt.day))E(tag+'.day 应匹配 /^D\\d+$/: '+JSON.stringify(pt.day));
+    // day 是展示标签:三峡真实数据含 '备选D2/3'/'方案A'/'D5晚' 等值,故只要求非空字符串(原计划写 /^D\d+$/,Task 3 执行时放宽)
+    if(typeof pt.day!=='string'||!pt.day)E(tag+'.day 缺失或不是非空字符串: '+JSON.stringify(pt.day));
     if(groupKeys.length&&groupKeys.indexOf(pt.seg)<0)E(tag+'.seg '+JSON.stringify(pt.seg)+' 不在 culture.groups 的 key 里');
     if(ai&&Array.isArray(ai.cats)&&ai.cats.length&&ai.cats.indexOf(pt.cat)<0)
       E(tag+'.cat '+JSON.stringify(pt.cat)+' 不在 ai.cats 里');
