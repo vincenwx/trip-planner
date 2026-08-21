@@ -313,7 +313,7 @@ section.on{display:block;}
     <div id="roadBox"><div class="skl" style="height:14px;width:70%;margin-bottom:6px"></div><div class="skl" style="height:14px;width:45%"></div></div>
 
     <div class="scard"><div class="sc-core">
-      <h3>文史地雷达<span class="en">100km 自动发现 · 11岁版</span></h3>
+      <h3 id="radarTitle">文史地雷达<span class="en">100km 自动发现 · 11岁版</span></h3>
       <div class="radar-filters">
         <button class="rf on" data-c="文" onclick="rfToggle(this)">文</button>
         <button class="rf on" data-c="史" onclick="rfToggle(this)">史</button>
@@ -408,6 +408,7 @@ function mountTrip(pack){
   rtDetailCache=load(K('poi-detail'),{});
   document.title=META.title;
   var culHintEl=document.getElementById('culHint');if(culHintEl)culHintEl.textContent=CULTURE.hint;
+  var radarTitleEl=document.getElementById('radarTitle');if(radarTitleEl)radarTitleEl.textContent='文史地雷达 · '+META.kidAge+'岁版';
 }
 
 /* ============ 入场动画(IntersectionObserver) ============ */
@@ -502,25 +503,24 @@ function legLatLngs(id,keys){if(roadCache&&roadCache[id]&&roadCache[id].g)return
 function estLegKm(keys){var t=0;for(var i=1;i<keys.length;i++)t+=hav(ANCHORS[keys[i-1]],ANCHORS[keys[i]]);return Math.round(t*1.25);}
 function legKm(id,keys){if(roadCache&&roadCache[id]&&roadCache[id].km)return roadCache[id].km;return estLegKm(keys);}
 function baseStyle(id){
- if(id==='flexA')return{color:'#2f6fb2',weight:6,dashArray:'10 8',opacity:flexChoice()==='A' ? .95 : .45};
- if(id==='flexB')return{color:'#e07b24',weight:6,dashArray:'10 8',opacity:flexChoice()==='B' ? .95 : .45};
- if(id==='flexC')return{color:'#d13c3c',weight:6,dashArray:'10 8',opacity:flexChoice()==='C' ? .95 : .45};
- if(id==='flexD')return{color:'#4ca64c',weight:6,dashArray:'10 8',opacity:flexChoice()==='D' ? .95 : .45};
+ var l=LEGS_BY_ID[id];
+ if(l&&l.flex){var o=FLEX_OPTS[l.flex];return{color:o.color,weight:6,dashArray:'10 8',opacity:flexChoice()===l.flex?.95:.45};}
  return{color:'#2f6f5e',weight:6,opacity:.9};
 }
 function initMap(){
  if(typeof L==='undefined'){document.getElementById('map').innerHTML='<div style="padding:24px;color:#7a746a">地图组件加载失败(需联网加载 Leaflet)。行程页不受影响。</div>';return;}
- map=L.map('map',{center:[31.2,110.5],zoom:5});
+ map=L.map('map',{center:MAPCFG.center,zoom:MAPCFG.zoom});
  L.tileLayer('https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}',{subdomains:['1','2','3','4'],maxZoom:18,attribution:'© 高德地图'}).addTo(map);
  POIS.forEach(function(p){var g=wgs2gcj(p.lat,p.lng);
   L.circleMarker([g[0],g[1]],{radius:p.pass?4:5,color:'#fff',weight:2,fillColor:p.pass?'#b8791f':'#c0513f',fillOpacity:1}).addTo(map)
    .bindPopup('<b>'+p.name+'</b> <span style="color:#7a746a">'+p.day+(p.pass?' · 车览':'')+'</span><br>'+p.info+'<br><a style="color:var(--teal);cursor:pointer;text-decoration:underline" onclick="openPoi(this.dataset.n)" data-n="'+p.name+'">讲透 →</a>');});
- var links={wh:['wx>wh','wh>fj'],fj:['wh>fj','fj>cq'],cq:['fj>cq','cq>dz>cd'],dz:['cq>dz>cd',null],cd:['cq>dz>cd','cd>yc'],yc:['cd>yc','yc>wx'],wx:['yc>wx',null]};
- ['wh','fj','cq','dz','cd','yc','wx'].forEach(function(k,i){var a=ANCHORS[k];var g=wgs2gcj(a.lat,a.lng);
+ MAPCFG.mainPath.forEach(function(k,i){var a=ANCHORS[k];var g=wgs2gcj(a.lat,a.lng);
   var pop='<b>'+a.name+'</b> <span style="color:#7a746a">'+a.stay+'</span>';
-  var lk=links[k];
-  if(k==='dz'){pop+='<br>所在段:重庆→成都 全段 '+legKm('cq>dz>cd',['cq','dz','cd'])+' km';}
-  else{var parts=[];ALL_LEGS.forEach(function(l){if(lk&&lk[0]===l.id)parts.push('上段 '+l.label+' '+legKm(l.id,l.keys)+'km');if(lk&&lk[1]===l.id)parts.push('下段 '+l.label+' '+legKm(l.id,l.keys)+'km');});if(parts.length)pop+='<br>'+parts.join('<br>');}
+  var parts=[];ALL_LEGS.forEach(function(l){if(l.flex)return;
+   if(l.keys[l.keys.length-1]===k)parts.push('上段 '+l.label+' '+legKm(l.id,l.keys)+'km');
+   if(l.keys[0]===k&&k!==OPTIMIZE.home)parts.push('下段 '+l.label+' '+legKm(l.id,l.keys)+'km');
+   else if(l.keys.indexOf(k)>0&&l.keys.indexOf(k)<l.keys.length-1)parts.push('所在段:'+l.label+' 全段 '+legKm(l.id,l.keys)+' km');});
+  if(parts.length)pop+='<br>'+parts.join('<br>');
   L.marker([g[0],g[1]],{icon:L.divIcon({className:'',html:'<div class="anchor-pin" style="width:24px;height:24px;background:#2f6f5e">'+(i+1)+'</div>',iconSize:[24,24],iconAnchor:[12,12]})}).addTo(map).bindPopup(pop);});
  drawRoutes();
  map.on('click',function(e){if(shouldIgnoreMapClick(e.originalEvent&&e.originalEvent.target))return;setMe(e.latlng.lat,e.latlng.lng,true);});
@@ -541,7 +541,7 @@ function pickLeg(id){
  pickedLeg=id;
  Object.keys(legLines).forEach(function(k){legLines[k].setStyle(baseStyle(k));});
  var ln=legLines[id];
- if(ln){var st={weight:9,color:'#26241f',opacity:.95};if(id.indexOf('flex')===0)st.dashArray='10 8';ln.setStyle(st);}
+ if(ln){var st={weight:9,color:'#26241f',opacity:.95};if(LEGS_BY_ID[id]&&LEGS_BY_ID[id].flex)st.dashArray='10 8';ln.setStyle(st);}
  showLegInfo(id);
 }
 function showLegInfo(id){
@@ -567,7 +567,7 @@ function gotoDay(g){
  var el=document.getElementById(g==='flex'?'dayflex':'day'+g);
  if(el){el.classList.add('open');setTimeout(function(){el.scrollIntoView({behavior:'smooth',block:'start'});},100);}
 }
-function fitAll(){if(!map)return;map.fitBounds(L.latLngBounds(pts(['wx','wh','fj','cq','dz','cd','jzg','ls','em','sg','ld','hg','yc'])).pad(0.03));}
+function fitAll(){if(!map)return;map.fitBounds(L.latLngBounds(pts(MAPCFG.fitAnchors)).pad(0.03));}
 function locateMe(){
  if(!navigator.geolocation){setNear('此浏览器不支持定位,请点地图手动设置。');return;}
  setNear('正在定位…');
@@ -695,38 +695,38 @@ function flexMetrics(city){
 /* ============ 剩余行程最优重排 ============ */
 function flexAnchor(){var c=flexChoice();return c==='A'?'jzg':(c==='C'?'sg':(c==='D'?'hg':'ls'));}
 function currentAnchor(){
- var order=['wx','wh','fj','cq','cd','yc'];
- var dayAnchor={1:'wh',2:'wh',3:'fj',4:'cq',5:'cq',6:'cd',7:'cd',8:'cd',9:'cd',14:'yc',15:'yc'};
- var last='wx',bestIdx=0;
+ var order=OPTIMIZE.order;
+ var dayAnchor={};Object.keys(OPTIMIZE.anchorDays).forEach(function(k){OPTIMIZE.anchorDays[k].forEach(function(n){dayAnchor[n]=k;});});
+ var last=OPTIMIZE.home,bestIdx=0;
  Object.keys(dayAnchor).forEach(function(n){if(state.done[n]){var idx=order.indexOf(dayAnchor[n]);if(idx>bestIdx){bestIdx=idx;last=dayAnchor[n];}}});
- if(last!=='wx')return last;
- if(state.me){var bk='wx',bd=1e9;Object.keys(ANCHORS).forEach(function(k){var d=hav(state.me,ANCHORS[k]);if(d<bd){bd=d;bk=k;}});return bk;}
- return 'wx';
+ if(last!==OPTIMIZE.home)return last;
+ if(state.me){var bk=OPTIMIZE.home,bd=1e9;Object.keys(ANCHORS).forEach(function(k){var d=hav(state.me,ANCHORS[k]);if(d<bd){bd=d;bk=k;}});return bk;}
+ return OPTIMIZE.home;
 }
 function permute(a){if(a.length<=1)return[a];var r=[];for(var i=0;i<a.length;i++){var rest=a.slice(0,i).concat(a.slice(i+1));permute(rest).forEach(function(p){r.push([a[i]].concat(p));});}return r;}
 function runOptimize(){
- var order=['wh','fj','cq','cd','yc'];
- var anchorDays={wh:[1,2],fj:[3],cq:[4,5],cd:[6,7,8,9],yc:[14,15]};
+ var order=OPTIMIZE.order.slice(1);
+ var anchorDays=OPTIMIZE.anchorDays;
  var doneAnchor=function(k){return anchorDays[k].every(function(n){return state.done[n];});};
  var cur=currentAnchor();
  var curIdx=order.indexOf(cur);
- var start=(curIdx>=0)?cur:'wx';
+ var start=(curIdx>=0)?cur:OPTIMIZE.home;
  if(curIdx<0)curIdx=-1;
  var rem=order.filter(function(k,i){return i>curIdx&&!doneAnchor(k);});
  var box=document.getElementById('optBox');
  if(!rem.length){box.innerHTML='没有需要重排的剩余宿营点了——按计划只剩回家。';return;}
- var legs=function(seq){var t=0,prev=start;seq.forEach(function(k){t+=hav(ANCHORS[prev],ANCHORS[k]);prev=k;});t+=hav(ANCHORS[prev],ANCHORS.wx);return t*1.25;};
+ var legs=function(seq){var t=0,prev=start;seq.forEach(function(k){t+=hav(ANCHORS[prev],ANCHORS[k]);prev=k;});t+=hav(ANCHORS[prev],ANCHORS[OPTIMIZE.home]);return t*1.25;};
  var best=null,bc=1e18;
  permute(rem).forEach(function(p){var c=legs(p);if(c<bc){bc=c;best=p;}});
  var orig=rem.slice(),oc=legs(orig);
  var names=function(seq){return seq.map(function(k){return ANCHORS[k].name;}).join(' → ');};
  var html='当前基准点:<b>'+ANCHORS[start].name+'</b>'+(state.me?'(按你的定位)':'(按完成进度)')+'<br>';
- html+='<div class="route-line">最优顺序:'+ANCHORS[start].name+' → <b>'+names(best)+'</b> → 无锡 ≈ '+Math.round(bc)+' km</div>';
- html+='<div class="route-line">原计划顺序:'+ANCHORS[start].name+' → '+names(orig)+' → 无锡 ≈ '+Math.round(oc)+' km</div>';
+ html+='<div class="route-line">最优顺序:'+ANCHORS[start].name+' → <b>'+names(best)+'</b> → '+ANCHORS[OPTIMIZE.home].name+' ≈ '+Math.round(bc)+' km</div>';
+ html+='<div class="route-line">原计划顺序:'+ANCHORS[start].name+' → '+names(orig)+' → '+ANCHORS[OPTIMIZE.home].name+' ≈ '+Math.round(oc)+' km</div>';
  if(Math.abs(bc-oc)<1)html+='<div class="km-diff">原计划已是最优,无需调整。</div>';
  else if(bc<oc-1)html+='<div class="km-diff">建议按最优顺序调整,估算可省约 '+Math.round(oc-bc)+' km。</div>';
  else html+='<div class="km-diff">原计划更优,保持。</div>';
- html+='<div class="dim" style="margin-top:6px">注:大足固定在重庆—成都之间;方案A/B/C/D为成都往返支线,不参与排序;此处里程为估算值,地图页为实际道路里程。</div>';
+ html+='<div class="dim" style="margin-top:6px">'+OPTIMIZE.note+'</div>';
  box.innerHTML=html;
 }
 
@@ -801,13 +801,13 @@ function runRadar(){
   radarCircles.forEach(function(x){map.removeLayer(x);});radarCircles=[];
   radarMarks.forEach(function(x){map.removeLayer(x);});radarMarks=[];
   var g0=wgs2gcj(c0.lat,c0.lng);
-  [25,50,100].forEach(function(r){radarCircles.push(L.circle(g0,{radius:r*1000,color:'#2f6f5e',weight:1,dashArray:'4 6',fill:false,opacity:.45}).addTo(map));});
+  [AI_CFG.radiusKm/4,AI_CFG.radiusKm/2,AI_CFG.radiusKm].forEach(function(r){radarCircles.push(L.circle(g0,{radius:r*1000,color:'#2f6f5e',weight:1,dashArray:'4 6',fill:false,opacity:.45}).addTo(map));});
  }
  var pts=allRadarPoints().map(function(p){
    var d=hav(c0,{lat:p.lat,lng:p.lng});
    return {n:p.n,c:p.c,lat:p.lat,lng:p.lng,info:p.info,q:p.q,src:p.src,d:d,dir:bearing8(c0,{lat:p.lat,lng:p.lng})};
-  }).filter(function(p){return p.d<=100&&rfCats[p.c];});
- if(rfRoute)pts=pts.filter(function(p){return nearRoute(p,20);});
+  }).filter(function(p){return p.d<=AI_CFG.radiusKm&&rfCats[p.c];});
+ if(rfRoute)pts=pts.filter(function(p){return nearRoute(p,AI_CFG.routeKm);});
  pts.sort(function(a,b){return a.d-b.d;});
  radarData=pts;
  var html='';
@@ -817,9 +817,9 @@ function runRadar(){
     .bindPopup('<b>'+p.n+'</b> <span style="color:#7a746a">'+p.c+' · '+p.d.toFixed(0)+'km '+p.dir+(p.src==='ai'?' · AI':'' )+'</span><br>'+p.info+(p.q?'<br><i>想一想:'+p.q+'</i>':'')));}
   html+='<div class="r-item" data-n="'+p.n+'" onclick="radarZoom('+i+');openPoi(this.dataset.n)"><span class="r-cat" style="background:'+CAT_STYLE[p.c].color+'">'+p.c+'</span><div class="r-main"><b>'+p.n+(p.src==='ai'?'<span class="r-ai">AI</span>':'')+'</b><p>'+p.info+'</p>'+(p.q?'<p class="r-q">想一想:'+p.q+'</p>':'')+'</div><span class="r-dist">'+p.d.toFixed(0)+'km<br>'+p.dir+'</span></div>';
  });
- listEl.innerHTML=html||'<div class="dim">100 公里内没有匹配点位(试试关闭“顺路”或换个分类)。</div>';
+ listEl.innerHTML=html||'<div class="dim">'+AI_CFG.radiusKm+' 公里内没有匹配点位(试试关闭“顺路”或换个分类)。</div>';
  var cnt=function(cc){return pts.filter(function(p){return p.c===cc;}).length;};
- st.innerHTML='圆心:当前位置 · 100km 内 <b>'+pts.length+'</b> 个点'+(rfRoute?'(顺路模式)':'')+' · 文'+cnt('文')+' 史'+cnt('史')+' 地'+cnt('地')+' 科'+cnt('科');
+ st.innerHTML='圆心:当前位置 · '+AI_CFG.radiusKm+'km 内 <b>'+pts.length+'</b> 个点'+(rfRoute?'(顺路模式)':'')+' · 文'+cnt('文')+' 史'+cnt('史')+' 地'+cnt('地')+' 科'+cnt('科');
 }
 function radarZoom(i){var p=radarData[i];if(!p||!map)return;var g=wgs2gcj(p.lat,p.lng);map.setView(g,Math.max(map.getZoom(),9));}
 /* ---- DeepSeek AI 深度扫描 ---- */

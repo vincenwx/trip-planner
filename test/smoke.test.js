@@ -20,3 +20,13 @@ ctx.setDone(10,true);
 assert.ok(document.getElementById('progTxt').textContent.includes('4 / 16'),'机动 doneKey 应计 daysCount 天');
 ctx.setDone(10,false);
 console.log('smoke.test.js: Task5 段通过');
+
+// 接 Task5 段之后
+ctx.runOptimize();
+var opt=document.getElementById('optBox').innerHTML;
+assert.ok(opt.includes('最优顺序')&&opt.includes('无锡'),'优化结果应使用 optimize.home 的城市名');
+ctx.setMe(30.66,104.06,false);ctx.runRadar();           // 成都市区
+var rl=document.getElementById('radarList').innerHTML;
+assert.ok(rl.includes('r-item'),'雷达应列出附近点位');
+assert.ok(document.getElementById('radarStatus').innerHTML.includes('100km'),'状态行');
+console.log('smoke.test.js: Task6 段通过');
