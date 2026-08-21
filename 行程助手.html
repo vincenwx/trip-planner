@@ -1230,11 +1230,23 @@ function wizStep2(){
  return h;
 }
 // 单批调用:dsJSON + 结构自检,不合格把原因喂回自动重试一次,仍不合格 throw(由 bakeNext 标 ❌)
+// json_object 模式下模型可能把数组包一层(如 {points:[...]}),unwrapArray 批次先剥壳再自检
+function asArr(r){
+ if(Array.isArray(r))return r;
+ if(r&&typeof r==='object'){
+  var ks=Object.keys(r);
+  for(var i=0;i<ks.length;i++){if(Array.isArray(r[ks[i]]))return r[ks[i]];}
+ }
+ return r;
+}
 function bakeCall(mkPrompt,check,opts){
+ var uw=function(r){return (opts&&opts.unwrapArray)?asArr(r):r;};
  return dsJSON(mkPrompt(null),opts).then(function(r){
+  r=uw(r);
   var e=check(r);
   if(!e)return r;
   return dsJSON(mkPrompt(e),opts).then(function(r2){
+   r2=uw(r2);
    var e2=check(r2);
    if(e2)throw new Error(e2);
    return r2;
@@ -1272,7 +1284,7 @@ function bakePois(){
  var days=PLANNER.skeleton.days,out=[],chain=Promise.resolve();
  for(var i=0;i<days.length;i+=4)(function(chunk){
   chain=chain.then(function(){
-   return bakeCall(function(err){return poisPrompt(chunk,err);},checkPois,{maxTokens:4000})
+   return bakeCall(function(err){return poisPrompt(chunk,err);},checkPois,{maxTokens:4000,unwrapArray:true})
     .then(function(r){out=out.concat(r);});
   });
  })(days.slice(i,i+4));
@@ -1298,7 +1310,7 @@ function checkRadar(r){
  return null;
 }
 function bakeRadar(){
- return bakeCall(radarPrompt,checkRadar,{maxTokens:3000}).then(function(r){PLANNER.baked.radarExtra=r;});
+ return bakeCall(radarPrompt,checkRadar,{maxTokens:3000,unwrapArray:true}).then(function(r){PLANNER.baked.radarExtra=r;});
 }
 // B2 poiDetail:每 6 个点一批,覆盖 pois+radarExtra 全量
 function detailPrompt(names,err){
@@ -1378,7 +1390,7 @@ function checkBookings(r){
  return null;
 }
 function bakeBookings(){
- return bakeCall(bookingsPrompt,checkBookings,{maxTokens:3000}).then(function(r){PLANNER.baked.bookings=r;});
+ return bakeCall(bookingsPrompt,checkBookings,{maxTokens:3000,unwrapArray:true}).then(function(r){PLANNER.baked.bookings=r;});
 }
 // B6 wxCities(+有 flex 才生成 wxRules)
 function wxPrompt(err){
