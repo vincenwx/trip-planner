@@ -966,12 +966,42 @@ function boot(){
   showPicker(trips);
 }
 function showPicker(trips){
-  var ids=Object.keys(trips);var h='<div style="max-width:420px;margin:18vh auto;padding:0 20px;font-family:inherit">';
-  h+='<h2 style="margin:0 0 6px">行程助手</h2><div class="dim" style="margin-bottom:14px">选择一个行程,或导入行程包(.json)</div>';
-  ids.forEach(function(id){h+='<button style="display:block;width:100%;margin:6px 0;padding:12px" onclick="pickTrip(\''+id+'\')">'+trips[id].meta.title+'</button>';});
-  h+='<input type="file" id="tripFile" accept=".json" style="margin-top:10px" onchange="importTripFile(this)">';
+  var ids=Object.keys(trips),cur=load('ta-current',null);
+  var h='<div style="max-width:460px;margin:10vh auto;padding:0 20px">';
+  h+='<h2 style="margin:0 0 4px">行程助手</h2>';
+  h+='<div class="dim" style="margin-bottom:16px">行前规划 · 行中助手 · 文史雷达</div>';
+  if(!ids.length){
+    h+='<div class="dim" style="margin:24px 0;line-height:1.8">还没有行程。<br>点击下方按钮导入行程包(.json)文件,<br>或先导入示例:trips/sanxia.trip.json</div>';
+  }
+  ids.forEach(function(id){
+    var t=trips[id],m=t.meta;
+    var done=load('ta-'+id+'-done',{});
+    var dn=0;Object.keys(done).forEach(function(k){if(done[k])dn++;});
+    var total=(t.days?t.days.length:0)+(t.flex?t.flex.daysCount:0);
+    h+='<div style="background:#fff;border-radius:14px;padding:14px 16px;margin:10px 0;box-shadow:0 1px 4px rgba(0,0,0,.08)">';
+    h+='<div style="display:flex;justify-content:space-between;align-items:baseline"><b style="font-size:17px">'+m.title+'</b>'+(id===cur?'<span style="font-size:11px;color:#2f6f5e">当前</span>':'')+'</div>';
+    h+='<div class="dim" style="font-size:12px;margin:4px 0">'+(m.dateStart||'')+' ~ '+(m.dateEnd||'')+' · '+total+' 天 · 已完成 '+dn+' 天</div>';
+    h+='<div style="margin-top:8px"><button class="btn" onclick="pickTrip(\''+id+'\')">进入</button> ';
+    h+='<button class="btn" onclick="exportTripById(\''+id+'\')">导出</button> ';
+    h+='<button class="btn" onclick="deleteTrip(\''+id+'\')">删除</button></div></div>';
+  });
+  h+='<div style="margin-top:18px"><label class="btn" style="cursor:pointer">导入行程包(.json)<input type="file" accept=".json" style="display:none" onchange="importTripFile(this)"></label></div>';
   h+='</div>';
   document.body.innerHTML=h;
+}
+function exportTripById(id){
+  var trips=load('ta-trips',{});var t=trips[id];if(!t)return;
+  var blob=new Blob([JSON.stringify(t)],{type:'application/json'});
+  var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=id+'.trip.json';a.click();
+}
+function deleteTrip(id){
+  if(!confirm('删除这个行程?它的打卡/调整等本地记录也会一并清除。'))return;
+  var trips=load('ta-trips',{});delete trips[id];save('ta-trips',trips);
+  if(load('ta-current',null)===id)save('ta-current',null);
+  var prefix='ta-'+id+'-';var rm=[];
+  for(var i=0;i<localStorage.length;i++){var k=localStorage.key(i);if(k&&k.indexOf(prefix)===0)rm.push(k);}
+  rm.forEach(function(k){localStorage.removeItem(k);});
+  location.reload();
 }
 function pickTrip(id){var trips=load('ta-trips',{});save('ta-current',id);location.reload();}
 function importTripFile(inp){

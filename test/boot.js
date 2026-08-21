@@ -5,8 +5,10 @@ function mkEl(){return {innerHTML:'',textContent:'',value:'',style:{},dataset:{}
 function boot(htmlPath,seed){
   const els={};const store=Object.assign({},seed||{});
   const document={getElementById(id){return els[id]||(els[id]=mkEl())},querySelectorAll(){return[]},createElement(){return mkEl()},body:mkEl(),_els:els};
-  const localStorage={_d:store,getItem(k){return k in this._d?this._d[k]:null},setItem(k,v){this._d[k]=String(v)},removeItem(k){delete this._d[k]}};
+  const localStorage={_d:store,getItem(k){return k in this._d?this._d[k]:null},setItem(k,v){this._d[k]=String(v)},removeItem(k){delete this._d[k]},
+    get length(){return Object.keys(this._d).length},key(i){return Object.keys(this._d)[i]||null}};
   const ctx={window:{},document,localStorage,navigator:{},console,
+    confirm:()=>true,location:{reload(){}},   // stub: 浏览器原生对话框/跳转,测试里默认确认、reload 空转
     fetch:()=>Promise.reject(new Error('offline')),
     setTimeout:(f)=>{try{f()}catch(e){console.error(e)}return 0},
     Date,JSON,Math,Object,Array,String,Number,RegExp,Error,Promise};

@@ -51,3 +51,22 @@ ctx.openPoi('黄鹤楼');
 assert.ok(document.getElementById('psBody').innerHTML.includes('背景故事'),'预烘焙讲解离线打开');
 ctx.closePoi();
 console.log('smoke.test.js: 全部通过 ('+__filename+')');
+
+// === M2-T1 行程库 ===
+(function(){
+  var boot2=require('./boot.js').boot;
+  var pack2=JSON.parse(fs.readFileSync(__dirname+'/../trips/sanxia.trip.json','utf8'));
+  // 空库：应出现导入引导，且正文不含行程卡
+  var r1=boot2(__dirname+'/../行程助手.html',{});
+  assert.ok(r1.document.body.innerHTML.includes('导入'),'空库应有导入引导');
+  // 有库无当前：显示行程卡（含标题/日期），但不 boot 进应用（progTxt 无内容）
+  var seed2={'ta-trips':JSON.stringify({sanxia16:pack2})};
+  var r2=boot2(__dirname+'/../行程助手.html',seed2);
+  var bh=r2.document.body.innerHTML;
+  assert.ok(bh.includes('诗路长江')&&bh.includes('2026'),'行程卡应显示标题与日期');
+  assert.ok(bh.includes('进入')&&bh.includes('删除'),'行程卡应有进入/删除操作');
+  // 删除函数：删库记录 + 清理该行程的 ta-<id>- 前缀 key
+  r2.ctx.deleteTrip('sanxia16');
+  assert.ok(!('sanxia16' in JSON.parse(r2.localStorage.getItem('ta-trips'))),'删除后库中无此行程');
+  console.log('smoke.test.js: M2-T1 段通过');
+})();
