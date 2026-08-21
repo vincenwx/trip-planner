@@ -969,6 +969,183 @@ function aiPoiDetail(name,poi){
  });
 }
 
+/* ============ M3 行前规划流水线:向导 + 骨架对稿 ============ */
+var PLANNER=null,wizErr=null;
+function loadPlanner(){PLANNER=load('ta-planner',null);}
+function savePlanner(){save('ta-planner',PLANNER);}
+function dsJSON(userPrompt,opts){
+ opts=opts||{};
+ var key=load('ta-ds-key','');
+ var body0={temperature:opts.temp||0.3,response_format:{type:'json_object'},max_tokens:opts.maxTokens||4000,
+  messages:[{role:'system',content:opts.sys||'你是亲子旅行规划师,只输出 JSON。'},{role:'user',content:userPrompt}]};
+ var attempt=function(idx,left){
+  var body=JSON.parse(JSON.stringify(body0));
+  body.model=['deepseek-v4-flash','deepseek-chat'][idx];
+  return fetch('https://api.deepseek.com/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},body:JSON.stringify(body)})
+  .then(function(r){
+   if(!r.ok){if(idx===0&&r.status===400)return attempt(1,left);throw new Error('HTTP '+r.status);}
+   return r.json();
+  }).then(function(j){
+   var txt=j.choices&&j.choices[0]&&j.choices[0].message&&j.choices[0].message.content;
+   return JSON.parse(txt);
+  }).catch(function(e){
+   if(left>1)return attempt(0,left-1);
+   throw e;
+  });
+ };
+ return attempt(0,3);
+}
+function openPlanner(){
+ loadPlanner();
+ if(!PLANNER)PLANNER={step:0,req:null,skeleton:null,
+  baked:{pois:null,poiDetail:null,radarExtra:null,bookings:null,flex:null,wxCities:null,wxRules:null,legInfo:null},
+  verify:null,log:[]};
+ wizErr=null;
+ wizRender();
+}
+function exitPlanner(){savePlanner();location.reload();}
+function wizRender(){
+ var h='<div style="max-width:560px;margin:0 auto;padding:18px 20px 60px">';
+ h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px"><b style="font-size:18px">新建行程</b><span class="dim" style="cursor:pointer;font-size:13px" onclick="exitPlanner()">← 返回行程库</span></div>';
+ if(PLANNER.step===0)h+=wizStep0();
+ else if(PLANNER.step===1)h+=wizStep1();
+ else h+='<div class="dim" style="margin:40px 0;text-align:center;line-height:2">步骤 '+PLANNER.step+'(烘焙/验证/完成)建设中,后续任务接入。</div>';
+ h+='</div>';
+ document.body.innerHTML=h;
+}
+function wizSaveKey(){
+ var el=document.getElementById('wizKeyIn');
+ var v=el&&el.value?el.value.trim():'';
+ if(v)save('ta-ds-key',v);
+ wizRender();
+}
+function wizStep0(){
+ var h='';
+ if(!load('ta-ds-key','')){
+  h+='<div style="background:var(--amber-lt);border-radius:12px;padding:12px 14px;margin-bottom:14px">';
+  h+='<div style="font-size:13px;margin-bottom:8px">首次规划请先粘贴 DeepSeek API Key(只存在本机):</div>';
+  h+='<input id="wizKeyIn" placeholder="sk-..." style="width:100%;padding:9px;border:1px solid var(--line);border-radius:8px;margin-bottom:8px">';
+  h+='<button class="btn" onclick="wizSaveKey()">保存 Key</button></div>';
+ }
+ h+='<div class="dim" style="margin-bottom:12px">第 1 步 · 告诉我你的需求,AI 来当规划师。</div>';
+ var inp=function(id,ph,val){return '<input id="'+id+'" placeholder="'+ph+'" value="'+(val||'')+'" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;margin:5px 0">';};
+ h+=inp('wizTitle','行程标题,如:南京三日');
+ h+='<div style="display:flex;gap:8px">'+inp('wizFrom','出发地')+inp('wizTo','目的地(逗号分隔多个)')+'</div>';
+ h+='<div style="display:flex;gap:8px">'+inp('wizDays','天数','5')+inp('wizStart','出发日期','2026-10-01')+inp('wizAge','孩子年龄','8')+'</div>';
+ h+=inp('wizTheme','主题','文史地');
+ h+='<div style="margin:8px 0;font-size:13px">交通方式:';
+ var mm={drive:'自驾',rail:'高铁',flight:'飞机',local:'市内'};
+ Object.keys(mm).forEach(function(m,i){
+  h+='<label style="margin-right:10px"><input type="checkbox" id="wizMode_'+m+'"'+(i===0?' checked':'')+'> '+mm[m]+'</label>';
+ });
+ h+='</div>';
+ h+='<div style="margin:8px 0;font-size:13px">节奏:<select id="wizRhythm" style="padding:8px;border-radius:8px;border:1px solid var(--line)"><option>松</option><option selected>适中</option><option>紧</option></select></div>';
+ h+=inp('wizAvoid','必去或避开(一行文字,可空)');
+ h+='<div style="margin:8px 0;font-size:13px"><label><input type="checkbox" id="wizFlex"> 需要机动方案(坏天气/临时状况的备选)</label>';
+ h+='<div style="display:flex;gap:8px;margin-top:5px">'+inp('wizFlexDays','机动天数','2')+inp('wizFlexCount','方案数','2')+'</div></div>';
+ h+='<div style="margin-top:14px"><button class="btn" style="width:100%" onclick="wizCollect()">生成行程骨架</button></div>';
+ return h;
+}
+function wizCollect(){
+ var v=function(id){var el=document.getElementById(id);return el&&el.value?String(el.value).trim():'';};
+ var modes=[];['drive','rail','flight','local'].forEach(function(m){var el=document.getElementById('wizMode_'+m);if(el&&el.checked)modes.push(m);});
+ var flexEl=document.getElementById('wizFlex');
+ wizSubmit({title:v('wizTitle')||'未命名行程',from:v('wizFrom'),to:v('wizTo'),days:v('wizDays'),startDate:v('wizStart'),
+  kidAge:v('wizAge'),theme:v('wizTheme')||'文史地',modes:modes,rhythm:v('wizRhythm')||'适中',mustAvoid:v('wizAvoid'),
+  needFlex:!!(flexEl&&flexEl.checked),flexDays:v('wizFlexDays'),flexCount:v('wizFlexCount')});
+}
+function wizSubmit(req){
+ if(typeof req.to==='string')req.to=req.to.split(/[,，、\s]+/).filter(function(s){return s;});
+ req.days=parseInt(req.days,10)||3;
+ req.kidAge=parseInt(req.kidAge,10)||8;
+ if(!req.modes||!req.modes.length)req.modes=['drive'];
+ PLANNER.req=req;PLANNER.step=1;wizErr=null;
+ savePlanner();wizRender();
+}
+function skelPrompt(req,fixErr){
+ var p='请为以下亲子旅行需求生成行程骨架(动线草案),只输出 JSON,不要任何额外文字。\n';
+ p+='需求:'+JSON.stringify({标题:req.title,出发地:req.from,目的地:req.to,天数:req.days,出发日期:req.startDate,
+  孩子年龄:req.kidAge,主题:req.theme,交通方式:req.modes,节奏:req.rhythm,必去或避开:req.mustAvoid,
+  机动方案:req.needFlex?{天数:req.flexDays,方案数:req.flexCount}:null})+'\n';
+ p+='要求:所有地点真实存在、可公开查证;坐标给 WGS-84 估算值;日期从出发日期顺推,full 为 YYYY-MM-DD,date 为 M.D,wd 星期要正确;legs 覆盖相邻 anchor,type/mode 用交通方式首选('+(req.modes[0]||'drive')+')。\n';
+ p+='输出 JSON 契约:{meta:{title,kicker,routeLine,kidAge,theme,region:"cn",dateStart,dateEnd,preDepartNote,endNote},'
+  +'anchors:{key:{name,lat,lng,stay}}(key 为 2 字母拼音缩写),'
+  +'days:[{n,date,full,wd,title,meta,type,anchor,plan:[...],know:[...],tags:[...]}](plan/know 必须是完整内容,后续不再补写),'
+  +'legs:[{id,keys,label,mode}],culture:{groups:[[seg,label]],hint},'
+  +'flex:null 或 {daysCount,options:[{key,name,short,anchor,note,rows:[],know:[]}]}(rows/know 留空数组),'
+  +'wxCityNames:["城市名",...]}。\n';
+ if(fixErr)p+='上一次生成的结果不合格:'+fixErr+'。请修正后重新输出完整 JSON。\n';
+ return p;
+}
+function skelCheck(s){
+ if(!s||typeof s!=='object')return '返回不是对象';
+ if(!s.meta||!s.meta.title)return 'meta 缺 title';
+ if(!s.anchors||Object.keys(s.anchors).length<2)return 'anchors 不足';
+ if(!Array.isArray(s.days)||!s.days.length)return 'days 为空';
+ for(var i=0;i<s.days.length;i++){var d=s.days[i];if(!d||!Array.isArray(d.plan)||!d.plan.length||!Array.isArray(d.know)||!d.know.length)return '第'+(i+1)+'天 plan/know 不完整';}
+ if(!Array.isArray(s.legs)||!s.legs.length)return 'legs 为空';
+ return null;
+}
+function genSkeleton(){
+ if(!PLANNER||!PLANNER.req)return Promise.reject(new Error('先填需求'));
+ wizErr=null;
+ return dsJSON(skelPrompt(PLANNER.req,null),{maxTokens:8000}).then(function(s){
+  var err=skelCheck(s);
+  if(!err)return s;
+  return dsJSON(skelPrompt(PLANNER.req,err),{maxTokens:8000}).then(function(s2){
+   var err2=skelCheck(s2);
+   if(err2)throw new Error('骨架结构不合格:'+err2);
+   return s2;
+  });
+ }).then(function(s){
+  PLANNER.skeleton=s;PLANNER.step=1;wizErr=null;
+  savePlanner();wizRender();
+ }).catch(function(e){
+  wizErr=e.message||String(e);wizRender();
+  throw e;
+ });
+}
+function skelRevise(text){
+ if(!PLANNER||!PLANNER.skeleton)return Promise.reject(new Error('还没有可修改的内容'));
+ if(!text||!String(text).trim())return Promise.reject(new Error('修改意见为空'));
+ var p='这是当前行程方案的完整 JSON:\n'+JSON.stringify(PLANNER.skeleton)+'\n\n'
+  +'用户修改意见:'+text+'\n'
+  +'请按修改意见调整(没提到的部分保持不变),重新输出完整的同结构 JSON,只输出 JSON,不要任何额外文字。';
+ return dsJSON(p,{maxTokens:8000}).then(function(s){
+  var err=skelCheck(s);
+  if(err)throw new Error('修改后的结果不合格:'+err);
+  PLANNER.skeleton=s;wizErr=null;
+  savePlanner();wizRender();
+ }).catch(function(e){
+  wizErr=e.message||String(e);wizRender();
+  throw e;
+ });
+}
+function wizStep1(){
+ var s=PLANNER.skeleton;
+ if(!s){
+  var h0='<div class="dim" style="margin:30px 0;text-align:center;line-height:2">';
+  h0+=wizErr?('生成失败:'+wizErr):'骨架还没有生成。';
+  h0+='</div><div style="text-align:center"><button class="btn" onclick="genSkeleton()">'+(wizErr?'重试生成':'生成骨架')+'</button></div>';
+  return h0;
+ }
+ var h='<div class="dim" style="margin-bottom:10px">第 2 步 · 骨架对稿:'+(s.meta&&s.meta.routeLine||'')+' · 共 '+s.days.length+' 天。逐天看,不满意就在底部提修改意见。</div>';
+ s.days.forEach(function(d){
+  h+='<div style="background:#fff;border-radius:14px;padding:12px 14px;margin:10px 0;box-shadow:0 1px 4px rgba(0,0,0,.08)">';
+  h+='<div><b>D'+d.n+' · '+d.title+'</b> <span class="dim" style="font-size:12px">'+d.full+' '+d.wd+'</span></div>';
+  h+='<div class="dim" style="font-size:12px;margin:4px 0">'+d.meta+'</div>';
+  h+='<ul style="margin:6px 0 0;padding-left:18px;font-size:13px">'+d.plan.slice(0,2).map(function(x){return '<li>'+x+'</li>';}).join('')+'</ul>';
+  h+='</div>';
+ });
+ h+='<div class="dim" style="margin:10px 0;font-size:13px">路段:'+s.legs.map(function(l){return l.label;}).join(' · ')+'</div>';
+ if(wizErr)h+='<div style="color:var(--cinn);font-size:13px;margin:8px 0">生成失败:'+wizErr+' <a style="text-decoration:underline;cursor:pointer" onclick="genSkeleton()">重试</a></div>';
+ h+='<div style="margin-top:14px"><input id="skelReviseIn" placeholder="用一句话提修改意见,如:第二天太赶了" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px">';
+ h+='<div style="margin-top:10px;display:flex;gap:8px"><button class="btn" onclick="skelRevise(document.getElementById(\'skelReviseIn\').value)">按意见修改</button>';
+ h+='<button class="btn" style="flex:1" onclick="startBake()">确认骨架,开始烘焙</button></div>';
+ return h;
+}
+function startBake(){alert('烘焙模块下一任务接入');}
+
 /* ============ 启动 ============ */
 function validatePack(p){
   try{
@@ -1010,7 +1187,11 @@ function showPicker(trips){
     h+='<button class="btn" onclick="exportTripById(\''+id+'\')">导出</button> ';
     h+='<button class="btn" onclick="deleteTrip(\''+id+'\')">删除</button></div></div>';
   });
-  h+='<div style="margin-top:18px"><label class="btn" style="cursor:pointer">导入行程包(.json)<input type="file" accept=".json" style="display:none" onchange="importTripFile(this)"></label></div>';
+  h+='<div style="margin-top:18px"><button class="btn" onclick="openPlanner()">新建行程</button>';
+  var draft=load('ta-planner',null);
+  if(draft&&draft.step>0)h+=' <button class="btn" onclick="openPlanner()">继续上次规划</button>';
+  h+='</div>';
+  h+='<div style="margin-top:10px"><label class="btn" style="cursor:pointer">导入行程包(.json)<input type="file" accept=".json" style="display:none" onchange="importTripFile(this)"></label></div>';
   h+='</div>';
   document.body.innerHTML=h;
 }
