@@ -449,7 +449,7 @@ function dayCard(d){
  h+='<article class="'+cls+'" id="day'+d.n+'"><div class="d-core">';
  h+='<div class="d-head" onclick="toggleDay('+d.n+')">';
  h+='<div class="d-badge">D'+d.n+'</div>';
- h+='<div class="d-title"><h3>'+d.title+'</h3><div class="d-meta">'+d.date+' '+d.wd+(d.meta?' · '+d.meta:'')+'</div></div>';
+ h+='<div class="d-title">'+(d.type&&MODE_META[d.type]?'<span class="d-mode">'+MODE_META[d.type].icon+'</span>':'')+'<h3>'+d.title+'</h3><div class="d-meta">'+d.date+' '+d.wd+(d.meta?' · '+d.meta:'')+'</div></div>';
  h+='<label class="d-done" onclick="event.stopPropagation()"><input type="checkbox" '+(state.done[d.n]?'checked':'')+' onchange="setDone('+d.n+',this.checked)"></label></div>';
  h+='<div class="d-body">';
  if(d.plan)h+='<h4>行程</h4><ul>'+lis(d.plan)+'</ul>';
@@ -507,9 +507,11 @@ function pts(keys){return keys.map(function(k){var a=ANCHORS[k];var g=wgs2gcj(a.
 function legLatLngs(id,keys){if(roadCache&&roadCache[id]&&roadCache[id].g)return roadCache[id].g;return pts(keys);}
 function estLegKm(keys){var t=0;for(var i=1;i<keys.length;i++)t+=hav(ANCHORS[keys[i-1]],ANCHORS[keys[i]]);return Math.round(t*1.25);}
 function legKm(id,keys){if(roadCache&&roadCache[id]&&roadCache[id].km)return roadCache[id].km;return estLegKm(keys);}
+var MODE_META={drive:{name:'自驾',color:'#2f6f5e',icon:'🚗'},rail:{name:'高铁',color:'#35608f',icon:'🚄'},flight:{name:'飞机',color:'#8e5aa2',icon:'✈️'},local:{name:'市内',color:'#7a746a',icon:'🚇'}};
 function baseStyle(id){
  var l=LEGS_BY_ID[id];
  if(l&&l.flex){var o=FLEX_OPTS[l.flex];return{color:o.color,weight:6,dashArray:'10 8',opacity:flexChoice()===l.flex?.95:.45};}
+ if(l&&l.mode&&l.mode!=='drive')return{color:(MODE_META[l.mode]||{}).color||'#7a746a',weight:5,dashArray:'4 8',opacity:.85};
  return{color:'#2f6f5e',weight:6,opacity:.9};
 }
 function initMap(){
@@ -536,7 +538,9 @@ function drawRoutes(){
  routeLayers.forEach(function(l){map.removeLayer(l);});routeLayers=[];legLines={};
  ALL_LEGS.forEach(function(l){
   var line=L.polyline(legLatLngs(l.id,l.keys),baseStyle(l.id)).addTo(map);
-  line.bindTooltip(l.label+' '+legKm(l.id,l.keys)+'km',{permanent:true,direction:'center',className:'leg-km'});
+  var tip=l.label+' '+legKm(l.id,l.keys)+'km';
+  if(l.mode&&l.mode!=='drive')tip=l.label+' · '+MODE_META[l.mode].name+' · 约'+estLegKm(l.keys)+'km(示意)';
+  line.bindTooltip(tip,{permanent:true,direction:'center',className:'leg-km'});
   line.on('click',function(e){L.DomEvent.stopPropagation(e.originalEvent);pickLeg(l.id);});
   legLines[l.id]=line;routeLayers.push(line);
  });
@@ -555,6 +559,7 @@ function showLegInfo(id){
  var info=LEG_INFO[id]||{};
  var actual=roadCache&&roadCache[id]&&roadCache[id].km;
  var html='<h4>'+leg.label+' · '+legKm(id,leg.keys)+' km'+(actual?'':' <span style="font-size:11px;color:var(--muted)">(估算)</span>')+'</h4>';
+ if(leg.mode&&leg.mode!=='drive')html+='<div class="l-meta">'+(MODE_META[leg.mode]?MODE_META[leg.mode].name:leg.mode)+' · 示意走线</div>';
  html+='<div class="l-meta">'+(info.day||'')+(info.h?' · '+info.h:'')+(info.note?' · '+info.note:'')+'</div>';
  if(info.pois&&info.pois.length){
   html+='<div class="dim" style="margin:4px 0">沿途站点:</div>';
@@ -616,7 +621,7 @@ function roadFetch(keys){
  });
 }
 function loadRoads(){
- var all=ALL_LEGS;
+ var all=ALL_LEGS.filter(function(l){return !l.mode||l.mode==='drive';});   // 非 drive 段画示意线,不进 OSRM
  var cache=roadCache||{};var i=0;
  function finish(){
   roadCache=cache;

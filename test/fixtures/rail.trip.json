@@ -1,0 +1,78 @@
+{
+  "schema": 1,
+  "meta": {
+    "id": "railtest",
+    "title": "高铁进京迷你行",
+    "kicker": "南京 · 北京 · 高铁 2 天",
+    "routeLine": "南京 → 北京",
+    "dateStart": "2026-09-05",
+    "dateEnd": "2026-09-06",
+    "kidAge": 11,
+    "theme": "高铁+首都文史",
+    "region": "cn",
+    "preDepartNote": "今晚请完成:订好高铁票,检查身份证。",
+    "endNote": "欢迎回家,记得整理照片和孩子的心得。"
+  },
+  "anchors": {
+    "hm": { "name": "南京", "lat": 32.06, "lng": 118.8, "stay": "家" },
+    "bj": { "name": "北京", "lat": 39.9, "lng": 116.4, "stay": "D1–2 宿" }
+  },
+  "days": [
+    {
+      "n": 1, "date": "9.5", "full": "2026-09-05", "wd": "周六",
+      "title": "南京 → 北京", "meta": "高铁约4h · 宿北京", "type": "rail", "anchor": "bj",
+      "plan": ["早8:00南京南站上车,京沪高铁一路向北", "中午到北京南站,下午酒店休整"],
+      "know": ["京沪高铁全长1318km,是世界上一次建成里程最长的高速铁路"],
+      "tags": [{ "t": "高铁日", "info": true }]
+    },
+    {
+      "n": 2, "date": "9.6", "full": "2026-09-06", "wd": "周日",
+      "title": "北京市内", "meta": "宿北京", "type": "city", "anchor": "bj",
+      "plan": ["上午:故宫博物院", "下午:返程"],
+      "know": ["故宫旧称紫禁城,是明清两代的皇宫,先后住过24位皇帝"],
+      "tags": []
+    }
+  ],
+  "legs": [
+    { "id": "hm>bj", "keys": ["hm", "bj"], "label": "南京→北京", "mode": "rail" },
+    { "id": "bj>local", "keys": ["bj"], "label": "北京市内", "mode": "local" }
+  ],
+  "legInfo": {
+    "hm>bj": { "day": "D1 · 9.5 周六", "h": "约4h", "note": "京沪高铁", "pois": [], "goto": "1" },
+    "bj>local": { "day": "D2 · 9.6 周日", "h": "市内", "note": "地铁+步行", "pois": ["故宫博物院"], "goto": "2" }
+  },
+  "pois": [
+    {
+      "name": "故宫博物院", "lat": 39.916, "lng": 116.397, "day": "D2", "seg": "out",
+      "info": "明清两代皇宫,旧称紫禁城,世界现存规模最大的木结构宫殿建筑群。",
+      "cat": "史", "q": "为什么故宫宫殿的屋顶大多是黄色的?"
+    }
+  ],
+  "radarExtra": [],
+  "poiDetail": {
+    "故宫博物院": {
+      "story": "故宫始建于明永乐四年(1406),1420年落成,到1911年先后住过明清24位皇帝。",
+      "see": ["太和殿的金砖地面", "屋脊上的脊兽队列", "乾清宫的正大光明匾"],
+      "fact": "太和殿屋脊上有10只脊兽,是中国古建筑中数量最多的。",
+      "think": "如果你是皇帝,会把最重要的仪式放在哪个殿?为什么?"
+    }
+  },
+  "flex": null,
+  "bookings": [],
+  "wxCities": [
+    { "name": "北京", "short": "北京", "lat": 39.9, "lng": 116.4, "role": null }
+  ],
+  "wxRules": null,
+  "optimize": {
+    "order": ["hm", "bj"],
+    "anchorDays": { "bj": [1, 2] },
+    "home": "hm",
+    "note": "注:此处里程为估算值。"
+  },
+  "culture": {
+    "groups": [["out", "全程"]],
+    "hint": "口袋文史导览:按路线顺序排列,随讲随查。"
+  },
+  "map": { "center": [35.8, 117.6], "zoom": 6, "mainPath": ["hm", "bj"], "fitAnchors": ["hm", "bj"] },
+  "ai": { "radiusKm": 100, "routeKm": 20, "cats": ["文", "史", "地", "科"] }
+}

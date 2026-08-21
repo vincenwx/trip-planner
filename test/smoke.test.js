@@ -70,3 +70,24 @@ console.log('smoke.test.js: 全部通过 ('+__filename+')');
   assert.ok(!('sanxia16' in JSON.parse(r2.localStorage.getItem('ta-trips'))),'删除后库中无此行程');
   console.log('smoke.test.js: M2-T1 段通过');
 })();
+
+
+// === M2-T2 交通方式 ===
+(function(){
+  var boot3=require('./boot.js').boot;
+  var rp=JSON.parse(fs.readFileSync(__dirname+'/fixtures/rail.trip.json','utf8'));
+  var r=boot3(__dirname+'/../行程助手.html',{'ta-trips':JSON.stringify({railtest:rp}),'ta-current':JSON.stringify('railtest')});
+  var c=r.ctx;
+  assert.ok(c.TRIP.meta.id==='railtest','挂载 railtest');
+  var st=c.baseStyle('hm>bj');
+  assert.ok(st.dashArray,'高铁段应为虚线示意');
+  assert.ok(st.color&&st.color!=='#2f6f5e','高铁段颜色应与自驾主线不同');
+  var fetchCalls=[];c.fetch=function(u){fetchCalls.push(u);return Promise.reject(new Error('x'));};
+  c.loadRoads();
+  assert.ok(!fetchCalls.some(function(u){return u.indexOf('osrm')>=0||u.indexOf('router')>=0;}),'非 drive 段不应请求 OSRM');
+  var stD=c.baseStyle('bj>local');
+  assert.ok(stD.dashArray,'市内段也应为虚线');
+  var card=c.dayCard(c.DAYS[0]);
+  assert.ok(card.includes('🚄'),'rail 日程卡应有高铁图标');
+  console.log('smoke.test.js: M2-T2 段通过');
+})();
