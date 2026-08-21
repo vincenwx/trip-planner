@@ -337,6 +337,13 @@ section.on{display:block;}
     <div class="scard"><div class="sc-core"><h3>今日状态</h3><div id="todayBody" class="dim">读取中…</div></div></div>
 
     <div class="scard"><div class="sc-core">
+      <h3>临时改行程</h3>
+      <textarea id="adjIn" rows="2" style="width:100%;padding:9px;border:1px solid var(--line);border-radius:8px" placeholder="如:D3 下雨,全部换室内;或 D5 想多加一个博物馆"></textarea>
+      <button class="btn" style="margin-top:8px" onclick="aiAdjustUi()"><span>让 AI 出方案</span></button>
+      <div id="adjBox" style="margin-top:10px"></div>
+    </div></div>
+
+    <div class="scard"><div class="sc-core">
       <h3>天气与方案决策<span class="en">Open-Meteo 实时预报</span></h3>
       <div class="dim" style="margin-bottom:8px">每次打开自动联网更新 · <span id="wxTime"></span> · <a style="color:var(--teal);cursor:pointer;text-decoration:underline" onclick="loadWeather()">立即刷新</a></div>
       <div id="wxBox"><div class="skl" style="height:16px;width:38%;margin-bottom:8px"></div><div class="skl" style="height:66px;margin-bottom:10px"></div><div class="skl" style="height:16px;width:30%;margin-bottom:8px"></div><div class="skl" style="height:66px"></div></div>
@@ -400,7 +407,7 @@ function mountTrip(pack){
   MAPCFG=pack.map;AI_CFG=pack.ai;
   LEGS=pack.legs;LEGS_BY_ID={};LEGS.forEach(function(l){LEGS_BY_ID[l.id]=l;});
   ALL_LEGS=LEGS;
-  state={done:load(K('done'),{}),books:load(K('books'),{}),plan:load(K('plan'),{choice:null}),me:null,skip:load(K('skip'),{days:{},pois:{}})};
+  state={done:load(K('done'),{}),books:load(K('books'),{}),plan:load(K('plan'),{choice:null}),me:null,skip:load(K('skip'),{days:{},pois:{}}),ovr:load(K('ovr'),{})};
   roadCache=load(K('roads-v1'),null);
   aiPacks=load(K('ai-packs'),{});dsKey=load('ta-ds-key','');
   rtDetailCache=load(K('poi-detail'),{});
@@ -439,7 +446,7 @@ function flexChoice(){return state.plan.choice||'A';}
 function setPlan(c){state.plan.choice=c;save(K('plan'),state.plan);renderTimeline();drawRoutes();var el=document.getElementById('dayflex');if(el)el.classList.add('open');}
 function renderTimeline(){
  var html='';
- for(var i=0;i<DAYS.length;i++)html+=dayCard(DAYS[i]);
+ for(var i=0;i<DAYS.length;i++)html+=dayCard(effDay(DAYS[i]));
  document.getElementById('sec1').innerHTML=html;
  riseScan();
 }
@@ -457,6 +464,7 @@ function dayCard(d){
  if(d.know)h+='<h4>讲给孩子</h4><ul class="know">'+lis(d.know)+'</ul>';
  if(d.tags&&d.tags.length)h+='<div class="tags">'+d.tags.map(function(t){var to=(typeof t==='string')?{t:t}:t;return '<span class="tag'+(to.info?' info':'')+'">'+to.t+'</span>';}).join('')+'</div>';
  h+='<span class="d-skiplink" onclick="event.stopPropagation();toggleSkipDay('+d.n+','+!state.skip.days[d.n]+')">'+(state.skip.days[d.n]?'恢复这天':'跳过这天')+'</span>';
+ if(state.ovr[d.n])h+=' <span class="d-skiplink" onclick="event.stopPropagation();revertDay('+d.n+')">已调整 · 还原</span>';
  h+='</div></div></article>';
  return h;
 }
@@ -484,6 +492,53 @@ function toggleSkipPoi(name,v){
  if(v)state.skip.pois[name]=true;else delete state.skip.pois[name];
  save(K('skip'),state.skip);renderCulture();if(map)drawPoiMarkers();renderPoi(name);
 }
+
+/* ============ M4 行中调整:AI 局部重规划(override 层) ============ */
+/* state.ovr:day n → 被替换字段子集{title,meta,plan,know,tags};n/full/wd/anchor/type 永远沿用原数据 */
+function effDay(d){var o=state.ovr[d.n];return o?Object.assign({},d,o,{n:d.n,full:d.full,wd:d.wd,anchor:d.anchor,type:d.type}):d;}
+var adjPending=null;
+function aiAdjustUi(){
+ var t=(document.getElementById('adjIn').value||'').trim();
+ if(!t)return;
+ aiAdjust(t);
+}
+function aiAdjust(text){
+ var box=document.getElementById('adjBox');
+ if(!load('ta-ds-key','')){box.innerHTML='<div class="dim">先在雷达卡粘贴 DeepSeek Key。</div>';return Promise.resolve();}
+ box.innerHTML='<div class="dim">AI 正在出替换方案(约 10-30 秒)…</div>';
+ var daysCtx=DAYS.map(function(d){return {n:d.n,full:d.full,wd:d.wd,title:d.title,meta:d.meta,plan:d.plan,know:d.know};});
+ var p='这是亲子自驾行程「'+META.title+'」的逐日安排 JSON:\n'+JSON.stringify(daysCtx)
+  +'\n\n用户在旅途中提出调整:「'+text+'」。请只替换需要改的天数(至多 3 天),其余天不要出现在结果里。'
+  +'输出 JSON:{days:[{n,title,meta,plan,know,tags}],note:"一句话说明为什么这么改"}。'
+  +'要求:plan/know 是完整新内容;地点真实存在;适合 '+META.kidAge+' 岁孩子;tags 为字符串数组。只输出 JSON。';
+ return dsJSON(p,{maxTokens:6000}).then(function(r){
+  if(!r||!Array.isArray(r.days)||!r.days.length)throw new Error('AI 没有给出可替换的天');
+  r.days=r.days.slice(0,3).filter(function(pd){return DAYS.some(function(d){return d.n===pd.n;});});
+  if(!r.days.length)throw new Error('AI 返回的天数不在行程里');
+  r.days.forEach(function(pd){if(Array.isArray(pd.tags))pd.tags=pd.tags.map(function(t){return typeof t==='string'?{t:t}:t;});});
+  adjPending=r;
+  var h='<div style="font-size:13px;line-height:1.7">';
+  r.days.forEach(function(pd){
+   var od=DAYS.filter(function(d){return d.n===pd.n;})[0];
+   h+='<div style="border-top:1px solid var(--line);padding:8px 0"><b>D'+pd.n+'</b> <span class="dim">原:'+od.title+'</span><br>→ <b>'+pd.title+'</b><br><span class="dim">'+pd.plan.slice(0,3).join('；')+'</span></div>';
+  });
+  if(r.note)h+='<div class="dim" style="margin:6px 0">AI 说明:'+r.note+'</div>';
+  h+='<button class="btn" onclick="applyAdjust()">应用</button> <button class="btn" onclick="discardAdjust()">放弃</button></div>';
+  box.innerHTML=h;
+ }).catch(function(e){box.innerHTML='<div class="dim">出方案失败:'+(e.message||e)+'</div>';throw e;});
+}
+function applyAdjust(){
+ if(!adjPending)return;
+ adjPending.days.forEach(function(pd){
+  state.ovr[pd.n]={title:pd.title,meta:pd.meta,plan:pd.plan,know:pd.know,tags:pd.tags||[]};
+ });
+ save(K('ovr'),state.ovr);
+ adjPending=null;
+ document.getElementById('adjBox').innerHTML='<div class="dim">已应用,行程页对应天数带「已调整」角标,可随时还原。</div>';
+ renderTimeline();renderToday();
+}
+function discardAdjust(){adjPending=null;document.getElementById('adjBox').innerHTML='';}
+function revertDay(n){delete state.ovr[n];save(K('ovr'),state.ovr);renderTimeline();renderToday();}
 function updateProgress(){
  var total=0,c=0;
  DAYS.forEach(function(d){if(state.skip.days[d.n])return;total++;if(state.done[d.n])c++;});
@@ -784,6 +839,7 @@ function renderToday(){
  var el=document.getElementById('todayBody');
  var hit=null;
  for(var i=0;i<DAYS.length;i++){if(DAYS[i].full===t){hit=DAYS[i];break;}}
+ if(hit)hit=effDay(hit);
  var html='';
  if(hit){html='<div class="big">今天 D'+hit.n+' · '+hit.title+'</div><div class="dim">'+hit.meta+'</div><ul style="margin:6px 0 0;padding-left:18px">'+lis(hit.plan)+'</ul>';}
  else if(FLEX&&t>=FLEX.dateStart&&t<=FLEX.dateEnd){var c=flexChoice();var idx=Math.round((new Date(t)-new Date(FLEX.dateStart))/86400000);var rows=FLEX_OPTS[c].rows;var row=rows[Math.max(0,Math.min(idx,rows.length-1))];html='<div class="big">今天 '+FLEX_OPTS[c].name+'</div><div class="dim">'+row[1]+'</div>';}

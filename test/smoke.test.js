@@ -109,3 +109,32 @@ console.log('smoke.test.js: 全部通过 ('+__filename+')');
   assert.ok(ctx.allRadarPoints().some(function(p){return p.n==='黄鹤楼';}),'恢复后回归');
   console.log('smoke.test.js: M2-T3 段通过');
 })();
+
+
+// === M4-T1 L2 局部重规划 ===
+(function(){
+  // mock deepseek:按 prompt 关键词"提出调整/替换需要改的天"识别局部重规划请求,返回 patch
+  ctx.save('ta-ds-key','sk-test');   // aiAdjust 无 key 会短路,先种一个假 key
+  ctx.fetch=function(url,opts){
+   var body=opts&&opts.body?opts.body:'';
+   if(url.indexOf('deepseek')>=0&&/提出调整|替换需要改的天/.test(body)){
+    return Promise.resolve({ok:true,json:()=>Promise.resolve({choices:[{message:{content:JSON.stringify({days:[{n:3,title:'武汉室内一日',meta:'宿武昌',plan:['上午:湖北省博物馆','下午:知音号研学'],know:['编钟是战国乐团'],tags:['室内']}],note:'雨天全改室内'})}}]})});
+   }
+   return Promise.reject(new Error('offline'));
+  };
+  return ctx.aiAdjust('D3 下雨,全部换室内').then(function(){
+   assert.ok(document.getElementById('adjBox').innerHTML.includes('武汉室内一日'),'预览应显示新方案');
+   assert.ok(document.getElementById('adjBox').innerHTML.includes('雨天全改室内'),'预览应显示 AI 说明');
+   ctx.applyAdjust();
+   assert.ok(ctx.state.ovr[3]&&ctx.state.ovr[3].title==='武汉室内一日','override 已写');
+   assert.ok(JSON.parse(ctx.localStorage.getItem('ta-sanxia16-ovr'))['3'],'override 已持久化');
+   assert.ok(document.getElementById('sec1').innerHTML.includes('武汉室内一日'),'时间轴显示新方案');
+   assert.ok(document.getElementById('sec1').innerHTML.includes('已调整'),'已调整角标');
+   var d3=ctx.effDay(ctx.DAYS[2]);
+   assert.ok(d3.full==='2026-07-27'&&d3.anchor==='fj','日期与锚点不被 AI 改');
+   ctx.revertDay(3);
+   assert.ok(!ctx.state.ovr[3],'还原后 override 清除');
+   assert.ok(!document.getElementById('sec1').innerHTML.includes('武汉室内一日'),'时间轴恢复原方案');
+   console.log('smoke.test.js: M4-T1 段通过');
+  }).catch(function(e){console.error(e);process.exit(1);});
+})();
