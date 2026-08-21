@@ -314,7 +314,7 @@ section.on{display:block;}
     <div id="roadBox"><div class="skl" style="height:14px;width:70%;margin-bottom:6px"></div><div class="skl" style="height:14px;width:45%"></div></div>
 
     <div class="scard"><div class="sc-core">
-      <h3 id="radarTitle">文史地雷达<span class="en">自动发现</span></h3>
+      <h3><span id="radarTitle">文史地雷达</span><span class="en">自动发现</span></h3>
       <div class="radar-filters">
         <button class="rf on" data-c="文" onclick="rfToggle(this)">文</button>
         <button class="rf on" data-c="史" onclick="rfToggle(this)">史</button>
@@ -385,6 +385,7 @@ section.on{display:block;}
 function load(k,def){try{var v=localStorage.getItem(k);return v?JSON.parse(v):def;}catch(e){return def;}}
 function save(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
 function fmtDate(d){var m=('0'+(d.getMonth()+1)).slice(-2),dd=('0'+d.getDate()).slice(-2);return d.getFullYear()+'-'+m+'-'+dd;}
+function mdLabel(iso){var p=iso.slice(5).split('-');return (+p[0])+'.'+(+p[1]);}
 function hav(a,b){var R=6371,toR=Math.PI/180;var dLa=(b.lat-a.lat)*toR,dLo=(b.lng-a.lng)*toR;var s=Math.sin(dLa/2)*Math.sin(dLa/2)+Math.cos(a.lat*toR)*Math.cos(b.lat*toR)*Math.sin(dLo/2)*Math.sin(dLo/2);return R*2*Math.atan2(Math.sqrt(s),Math.sqrt(1-s));}
 /* WGS-84 ↔ GCJ-02(高德底图纠偏与反解) */
 var G_PI=3.14159265358979324,G_A=6378245.0,G_EE=0.00669342162296594323;
@@ -475,7 +476,7 @@ function flexCard(){
  var c=flexChoice(),p=FLEX_OPTS[c];
  var h='<article class="day flex" id="dayflex"><div class="d-core">';
  h+='<div class="d-head" onclick="document.getElementById(\'dayflex\').classList.toggle(\'open\')">';
- h+='<div class="d-badge">'+FLEX.badge+'</div><div class="d-title"><h3>'+FLEX.title+' · '+p.name+'</h3><div class="d-meta">'+FLEX.dateStart.slice(5).replace('-','.')+'–'+FLEX.dateEnd.slice(5).replace('-','.')+' · '+FLEX.hint+'</div></div>';
+ h+='<div class="d-badge">'+FLEX.badge+'</div><div class="d-title"><h3>'+FLEX.title+' · '+p.name+'</h3><div class="d-meta">'+mdLabel(FLEX.dateStart)+'–'+mdLabel(FLEX.dateEnd)+' · '+FLEX.hint+'</div></div>';
  h+='<label class="d-done" onclick="event.stopPropagation()"><input type="checkbox" '+(state.done[FLEX.doneKey]?'checked':'')+' onchange="setDone('+FLEX.doneKey+',this.checked)"></label></div>';
  h+='<div class="d-body" style="padding-left:14px">';
  h+='<div class="flex-sw">';
@@ -829,7 +830,7 @@ function renderBooks(){
   var cls='book'+(done?' done':''),dueTxt;
   if(b.due<todayStr){if(!done){cls+=' urgent';dueTxt='已过期!';}else{dueTxt='已过期';}}
   else if(b.due===todayStr){cls+=' urgent';dueTxt='今天办';}
-  else{var diff=Math.round((new Date(b.due)-new Date(todayStr))/86400000);if(diff<=2&&!done)cls+=' soon';dueTxt=b.due.slice(5).replace('-','.')+'前';}
+  else{var diff=Math.round((new Date(b.due)-new Date(todayStr))/86400000);if(diff<=2&&!done)cls+=' soon';dueTxt=mdLabel(b.due)+'前';}
   html+='<div class="'+cls+'"><input type="checkbox" '+(done?'checked':'')+' onchange="setBook('+i+',this.checked)"><div class="b-txt">'+b.what+'<div class="b-how">'+b.how+'</div></div><span class="b-due">'+dueTxt+'</span></div>';
  });
  document.getElementById('bookBox').innerHTML=html;
