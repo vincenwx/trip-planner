@@ -91,3 +91,21 @@ console.log('smoke.test.js: 全部通过 ('+__filename+')');
   assert.ok(card.includes('🚄'),'rail 日程卡应有高铁图标');
   console.log('smoke.test.js: M2-T2 段通过');
 })();
+
+
+// === M2-T3 跳过/恢复 ===
+(function(){
+  ctx.toggleSkipDay(3,true);
+  assert.ok(document.getElementById('sec1').innerHTML.includes('skipped'),'跳过的天卡应有 skipped 样式');
+  assert.ok(document.getElementById('progTxt').textContent.includes('/ 15 天'),'跳过一天后总数 15');
+  ctx.toggleSkipDay(3,false);
+  assert.ok(document.getElementById('progTxt').textContent.includes('/ 16 天'),'恢复后总数 16');
+  ctx.toggleSkipPoi('黄鹤楼',true);
+  assert.ok(document.getElementById('culBox').innerHTML.match(/cul-item[^>]*skipped/),'文史项应置灰');
+  var names=ctx.allRadarPoints().map(function(p){return p.n;});
+  assert.ok(names.indexOf('黄鹤楼')<0,'跳过的 POI 雷达排除');
+  assert.ok(ctx.state.skip.pois['黄鹤楼']===true,'override 层已写');
+  ctx.toggleSkipPoi('黄鹤楼',false);
+  assert.ok(ctx.allRadarPoints().some(function(p){return p.n==='黄鹤楼';}),'恢复后回归');
+  console.log('smoke.test.js: M2-T3 段通过');
+})();

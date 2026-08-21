@@ -264,6 +264,7 @@ section.on{display:block;}
 .anchor-pin{border-radius:50%; border:2px solid #fffdf9; box-shadow:0 2px 6px rgba(38,36,31,.4); color:#fdfbf6; font-weight:700; font-size:11px; display:flex; align-items:center; justify-content:center; font-family:var(--fnum);}
 .me-pulse{border-radius:50%; background:rgba(53,96,143,.25); border:2px solid #35608f;}
 @media (min-width:640px){ body{font-size:16px;} }
+.day.skipped{opacity:.45}.day.skipped .d-title h3{text-decoration:line-through}.cul-item.skipped{opacity:.4}.d-skiplink{font-size:12px;color:var(--muted);cursor:pointer;text-decoration:underline;margin-top:6px;display:inline-block}
 </style>
 </head>
 <body>
@@ -399,7 +400,7 @@ function mountTrip(pack){
   MAPCFG=pack.map;AI_CFG=pack.ai;
   LEGS=pack.legs;LEGS_BY_ID={};LEGS.forEach(function(l){LEGS_BY_ID[l.id]=l;});
   ALL_LEGS=LEGS;
-  state={done:load(K('done'),{}),books:load(K('books'),{}),plan:load(K('plan'),{choice:null}),me:null};
+  state={done:load(K('done'),{}),books:load(K('books'),{}),plan:load(K('plan'),{choice:null}),me:null,skip:load(K('skip'),{days:{},pois:{}})};
   roadCache=load(K('roads-v1'),null);
   aiPacks=load(K('ai-packs'),{});dsKey=load('ta-ds-key','');
   rtDetailCache=load(K('poi-detail'),{});
@@ -443,7 +444,7 @@ function renderTimeline(){
  riseScan();
 }
 function dayCard(d){
- var cls='day'+(d.type?' '+d.type:'')+(state.done[d.n]?' done':'');
+ var cls='day'+(d.type?' '+d.type:'')+(state.done[d.n]?' done':'')+(state.skip.days[d.n]?' skipped':'');
  var h='';
  if(FLEX&&d.n===FLEX.insertBeforeDay){h+=flexCard();}
  h+='<article class="'+cls+'" id="day'+d.n+'"><div class="d-core">';
@@ -455,6 +456,7 @@ function dayCard(d){
  if(d.plan)h+='<h4>行程</h4><ul>'+lis(d.plan)+'</ul>';
  if(d.know)h+='<h4>讲给孩子</h4><ul class="know">'+lis(d.know)+'</ul>';
  if(d.tags&&d.tags.length)h+='<div class="tags">'+d.tags.map(function(t){return '<span class="tag'+(t.info?' info':'')+'">'+t.t+'</span>';}).join('')+'</div>';
+ h+='<span class="d-skiplink" onclick="event.stopPropagation();toggleSkipDay('+d.n+','+!state.skip.days[d.n]+')">'+(state.skip.days[d.n]?'恢复这天':'跳过这天')+'</span>';
  h+='</div></div></article>';
  return h;
 }
@@ -477,9 +479,15 @@ function flexCard(){
 }
 function toggleDay(n){var el=document.getElementById('day'+n);if(el)el.classList.toggle('open');}
 function setDone(n,v){state.done[n]=v;save(K('done'),state.done);var el=document.getElementById(FLEX&&n===FLEX.doneKey?'dayflex':'day'+n);if(el)el.classList.toggle('done',v);updateProgress();}
+function toggleSkipDay(n,v){state.skip.days[n]=v;save(K('skip'),state.skip);renderTimeline();updateProgress();}
+function toggleSkipPoi(name,v){
+ if(v)state.skip.pois[name]=true;else delete state.skip.pois[name];
+ save(K('skip'),state.skip);renderCulture();if(map)drawPoiMarkers();renderPoi(name);
+}
 function updateProgress(){
- var total=DAYS.length+(FLEX?FLEX.daysCount:0),c=0;
- DAYS.forEach(function(d){if(state.done[d.n])c++;});
+ var total=0,c=0;
+ DAYS.forEach(function(d){if(state.skip.days[d.n])return;total++;if(state.done[d.n])c++;});
+ total+=(FLEX?FLEX.daysCount:0);
  if(FLEX&&state.done[FLEX.doneKey])c+=FLEX.daysCount;
  document.getElementById('progBar').style.width=(c/total*100)+'%';
  document.getElementById('progTxt').textContent='已完成 '+c+' / '+total+' 天'+(c===total?' · 全程收官!':'');
@@ -493,7 +501,7 @@ function renderCulture(){
   html+='<div class="cul-group"><span>'+g[1]+'</span></div>';
   POIS.forEach(function(p){
    if(p.seg!==g[0])return;
-   html+='<div class="cul-item" style="cursor:pointer" onclick="openPoi(this.dataset.n)" data-n="'+p.name+'"><div class="cul-core"><span class="cul-day'+(p.pass?' pass':'')+'">'+p.day+'</span><div><b>'+p.name+(p.pass?' <span style="font-weight:400;font-size:11px;color:var(--amber)">车览</span>':'')+'</b><p>'+p.info+'</p></div></div></div>';
+   html+='<div class="cul-item'+(state.skip.pois[p.name]?' skipped':'')+'" style="cursor:pointer" onclick="openPoi(this.dataset.n)" data-n="'+p.name+'"><div class="cul-core"><span class="cul-day'+(p.pass?' pass':'')+'">'+p.day+'</span><div><b>'+p.name+(p.pass?' <span style="font-weight:400;font-size:11px;color:var(--amber)">车览</span>':'')+'</b><p>'+p.info+'</p></div></div></div>';
   });
  });
  document.getElementById('culBox').innerHTML=html;
@@ -501,7 +509,7 @@ function renderCulture(){
 }
 
 /* ============ 地图 ============ */
-var map=null,meMarker=null,routeLayers=[],legLines={},pickedLeg=null;
+var map=null,meMarker=null,routeLayers=[],legLines={},pickedLeg=null,poiMarkerLayers=[];
 var ALL_LEGS;
 function pts(keys){return keys.map(function(k){var a=ANCHORS[k];var g=wgs2gcj(a.lat,a.lng);return[g[0],g[1]];});}
 function legLatLngs(id,keys){if(roadCache&&roadCache[id]&&roadCache[id].g)return roadCache[id].g;return pts(keys);}
@@ -514,13 +522,22 @@ function baseStyle(id){
  if(l&&l.mode&&l.mode!=='drive')return{color:(MODE_META[l.mode]||{}).color||'#7a746a',weight:5,dashArray:'4 8',opacity:.85};
  return{color:'#2f6f5e',weight:6,opacity:.9};
 }
+function drawPoiMarkers(){
+ if(!map)return;
+ poiMarkerLayers.forEach(function(m){map.removeLayer(m);});
+ poiMarkerLayers=[];
+ POIS.forEach(function(p){
+  if(state.skip.pois[p.name])return;
+  var g=wgs2gcj(p.lat,p.lng);
+  var m=L.circleMarker([g[0],g[1]],{radius:p.pass?4:5,color:'#fff',weight:2,fillColor:p.pass?'#b8791f':'#c0513f',fillOpacity:1}).addTo(map)
+   .bindPopup('<b>'+p.name+'</b> <span style="color:#7a746a">'+p.day+(p.pass?' · 车览':'')+'</span><br>'+p.info+'<br><a style="color:var(--teal);cursor:pointer;text-decoration:underline" onclick="openPoi(this.dataset.n)" data-n="'+p.name+'">讲透 →</a>');
+  poiMarkerLayers.push(m);});
+}
 function initMap(){
  if(typeof L==='undefined'){document.getElementById('map').innerHTML='<div style="padding:24px;color:#7a746a">地图组件加载失败(需联网加载 Leaflet)。行程页不受影响。</div>';return;}
  map=L.map('map',{center:MAPCFG.center,zoom:MAPCFG.zoom});
  L.tileLayer('https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}',{subdomains:['1','2','3','4'],maxZoom:18,attribution:'© 高德地图'}).addTo(map);
- POIS.forEach(function(p){var g=wgs2gcj(p.lat,p.lng);
-  L.circleMarker([g[0],g[1]],{radius:p.pass?4:5,color:'#fff',weight:2,fillColor:p.pass?'#b8791f':'#c0513f',fillOpacity:1}).addTo(map)
-   .bindPopup('<b>'+p.name+'</b> <span style="color:#7a746a">'+p.day+(p.pass?' · 车览':'')+'</span><br>'+p.info+'<br><a style="color:var(--teal);cursor:pointer;text-decoration:underline" onclick="openPoi(this.dataset.n)" data-n="'+p.name+'">讲透 →</a>');});
+ drawPoiMarkers();
  MAPCFG.mainPath.forEach(function(k,i){var a=ANCHORS[k];var g=wgs2gcj(a.lat,a.lng);
   var pop='<b>'+a.name+'</b> <span style="color:#7a746a">'+a.stay+'</span>';
   var parts=[];ALL_LEGS.forEach(function(l){if(l.flex)return;
@@ -784,8 +801,8 @@ var CAT_STYLE={'文':{color:'#8e5aa2'},'史':{color:'#c0513f'},'地':{color:'#2f
 var radarMarks=[],radarCircles=[],radarData=[];
 var rfCats={'文':true,'史':true,'地':true,'科':true},rfRoute=true;
 function allRadarPoints(){
- var base=POIS.map(function(p){return {n:p.name,c:p.cat,lat:p.lat,lng:p.lng,info:p.info,q:p.q,src:'curated'};});
- var extra=RADAR_EXTRA.map(function(p){return {n:p.n,c:p.c,lat:p.lat,lng:p.lng,info:p.info,q:p.q,src:'curated'};});
+ var base=POIS.map(function(p){return {n:p.name,c:p.cat,lat:p.lat,lng:p.lng,info:p.info,q:p.q,src:'curated'};}).filter(function(p){return !state.skip.pois[p.n];});
+ var extra=RADAR_EXTRA.map(function(p){return {n:p.n,c:p.c,lat:p.lat,lng:p.lng,info:p.info,q:p.q,src:'curated'};}).filter(function(p){return !state.skip.pois[p.n];});
  var ai=[];
  Object.keys(aiPacks).forEach(function(g){(aiPacks[g].pts||[]).forEach(function(p){ai.push({n:p.name,c:p.cat,lat:p.lat,lng:p.lng,info:p.info,q:p.q,src:'ai'});});});
  return base.concat(extra,ai);
@@ -913,23 +930,26 @@ function fmtPoi(d,src){
  h+='<div class="ps-src">'+(src==='bake'?'内容已预烘焙 · 离线可用':'AI 现场生成 · 已缓存本机')+'</div>';
  return h;
 }
+function skipBtn(name){
+ var sk=!!state.skip.pois[name];
+ return '<div style="margin-top:14px;text-align:center"><span class="d-skiplink" data-n="'+name+'" onclick="toggleSkipPoi(this.dataset.n,'+!sk+')">'+(sk?'恢复此点':'跳过此点')+'</span></div>';
+}
+function paintPoiBody(html,name){document.getElementById('psBody').innerHTML=html+skipBtn(name);}
 function renderPoi(name){
- var body=document.getElementById('psBody');
  var catEl=document.getElementById('psCat');
  var poi=poiByName(name);
  var cat=poi?poi.cat:'史';
  catEl.textContent=cat;catEl.style.background=CAT_STYLE[cat].color;
  var d=POI_DETAIL[name]||rtDetailCache[name];
- if(d){body.innerHTML=fmtPoi(d,'bake');return;}
+ if(d){paintPoiBody(fmtPoi(d,'bake'),name);return;}
  var skl='<div class="skl" style="height:14px;width:60%;margin-bottom:6px"></div><div class="skl" style="height:14px;width:88%;margin-bottom:6px"></div><div class="skl" style="height:14px;width:45%"></div>';
- body.innerHTML=(poi&&poi.info?'<p>'+poi.info+'</p><div style="height:10px"></div>':'')+skl;
+ paintPoiBody((poi&&poi.info?'<p>'+poi.info+'</p><div style="height:10px"></div>':'')+skl,name);
  aiPoiDetail(name,poi);
 }
 function aiPoiDetail(name,poi){
- var body=document.getElementById('psBody');
  var info=poi&&poi.info?poi.info:'';
  var cat=poi?poi.cat:'史';
- if(!dsKey){body.innerHTML=(info?'<p>'+info+'</p>':'')+'<div class="ps-src">在雷达卡粘贴 DeepSeek Key 后,这里会显示 AI 详解。</div>';return;}
+ if(!dsKey){paintPoiBody((info?'<p>'+info+'</p>':'')+'<div class="ps-src">在雷达卡粘贴 DeepSeek Key 后,这里会显示 AI 详解。</div>',name);return;}
  var body0={temperature:0.4,response_format:{type:'json_object'},
   messages:[{role:'system',content:'你是亲子旅行讲解员,只输出 JSON,不要任何额外文字。'},
    {role:'user',content:'景点:'+name+'(类别:'+cat+')。已知简介:'+info+'\n请写给 '+META.kidAge+' 岁孩子的深度讲解,输出 JSON 对象:{"story":"背景故事,2-3句","see":["看点1","看点2","看点3"],"fact":"一条冷知识","think":"一个进阶开放问题"}。要求:史实准确不编造;每条15-40字;口语化,禁用"魅力""底蕴""震撼"这类词;see 是到现场具体看什么;think 要开放且与该点强相关。'}]};
@@ -943,9 +963,9 @@ function aiPoiDetail(name,poi){
   if(!(d.story&&d.see&&d.see.length&&d.fact&&d.think))throw new Error('bad');
   var dd={story:d.story,see:d.see.slice(0,3),fact:d.fact,think:d.think};
   rtDetailCache[name]=dd;save(K('poi-detail'),rtDetailCache);
-  body.innerHTML=fmtPoi(dd,'ai');
+  paintPoiBody(fmtPoi(dd,'ai'),name);
  }).catch(function(){
-  body.innerHTML=(info?'<p>'+info+'</p>':'')+'<div class="ps-src">AI 详解加载失败(没网或密钥问题),先看简介,回家再补。</div>';
+  paintPoiBody((info?'<p>'+info+'</p>':'')+'<div class="ps-src">AI 详解加载失败(没网或密钥问题),先看简介,回家再补。</div>',name);
  });
 }
 
