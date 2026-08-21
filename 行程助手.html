@@ -290,7 +290,7 @@ section.on{display:block;}
   <section id="sec1" class="on"></section>
 
   <section id="sec2">
-    <div class="map-hint" style="margin:4px 2px 0">口袋文史导览:按路线顺序排列,车上随讲随查。"车览"=高速远观不停留;"备选"=顺路可加,看时间灵活取舍。</div>
+    <div class="map-hint" id="culHint" style="margin:4px 2px 0">口袋文史导览:按路线顺序排列,车上随讲随查。"车览"=高速远观不停留;"备选"=顺路可加,看时间灵活取舍。</div>
     <div id="culBox"></div>
   </section>
 
@@ -407,6 +407,7 @@ function mountTrip(pack){
   aiPacks=load(K('ai-packs'),{});dsKey=load('ta-ds-key','');
   rtDetailCache=load(K('poi-detail'),{});
   document.title=META.title;
+  var culHintEl=document.getElementById('culHint');if(culHintEl)culHintEl.textContent=CULTURE.hint;
 }
 
 /* ============ 入场动画(IntersectionObserver) ============ */
@@ -438,7 +439,7 @@ function renderTimeline(){
 function dayCard(d){
  var cls='day'+(d.type?' '+d.type:'')+(state.done[d.n]?' done':'');
  var h='';
- if(d.n===14){h+=flexCard();}
+ if(FLEX&&d.n===FLEX.insertBeforeDay){h+=flexCard();}
  h+='<article class="'+cls+'" id="day'+d.n+'"><div class="d-core">';
  h+='<div class="d-head" onclick="toggleDay('+d.n+')">';
  h+='<div class="d-badge">D'+d.n+'</div>';
@@ -455,35 +456,32 @@ function flexCard(){
  var c=flexChoice(),p=FLEX_OPTS[c];
  var h='<article class="day flex" id="dayflex"><div class="d-core">';
  h+='<div class="d-head" onclick="document.getElementById(\'dayflex\').classList.toggle(\'open\')">';
- h+='<div class="d-badge">D10–13</div><div class="d-title"><h3>机动四天 · '+p.name+'</h3><div class="d-meta">8.3–8.6 · 出发前3天看天气定(智能助手会自动建议)</div></div>';
- h+='<label class="d-done" onclick="event.stopPropagation()"><input type="checkbox" '+(state.done[10]?'checked':'')+' onchange="setDone(10,this.checked)"></label></div>';
+ h+='<div class="d-badge">'+FLEX.badge+'</div><div class="d-title"><h3>'+FLEX.title+' · '+p.name+'</h3><div class="d-meta">'+FLEX.dateStart.slice(5).replace('-','.')+'–'+FLEX.dateEnd.slice(5).replace('-','.')+' · '+FLEX.hint+'</div></div>';
+ h+='<label class="d-done" onclick="event.stopPropagation()"><input type="checkbox" '+(state.done[FLEX.doneKey]?'checked':'')+' onchange="setDone('+FLEX.doneKey+',this.checked)"></label></div>';
  h+='<div class="d-body" style="padding-left:14px">';
  h+='<div class="flex-sw">';
- h+='<button class="'+(c==='A'?'on':'')+'" onclick="setPlan(\'A\')">A · 九寨</button>';
- h+='<button class="'+(c==='B'?'on':'')+'" onclick="setPlan(\'B\')">B · 乐峨</button>';
- h+='<button class="'+(c==='C'?'on':'')+'" onclick="setPlan(\'C\')">C · 四姑娘</button>';
- h+='<button class="'+(c==='D'?'on':'')+'" onclick="setPlan(\'D\')">D · 海螺沟</button></div>';
+ Object.keys(FLEX_OPTS).forEach(function(k){h+='<button class="'+(c===k?'on':'')+'" onclick="setPlan(\''+k+'\')">'+k+' · '+FLEX_OPTS[k].short+'</button>';});
+ h+='</div>';
  h+='<h4>行程</h4><ul>'+p.rows.map(function(r){return '<li><b>'+r[0]+'</b> '+r[1]+'</li>';}).join('')+'</ul>';
  h+='<h4>讲给孩子</h4><ul class="know">'+lis(p.know)+'</ul>';
  h+='<div class="flex-note">▎本方案:'+p.note+'</div>';
- ['A','B','C','D'].forEach(function(k){if(k!==c)h+='<div class="flex-note">▎'+FLEX_OPTS[k].name+':'+FLEX_OPTS[k].note+'</div>';});
+ Object.keys(FLEX_OPTS).forEach(function(k){if(k!==c)h+='<div class="flex-note">▎'+FLEX_OPTS[k].name+':'+FLEX_OPTS[k].note+'</div>';});
  h+='</div></div></article>';
  return h;
 }
 function toggleDay(n){var el=document.getElementById('day'+n);if(el)el.classList.toggle('open');}
-function setDone(n,v){state.done[n]=v;save(K('done'),state.done);var el=document.getElementById(n===10?'dayflex':'day'+n);if(el)el.classList.toggle('done',v);updateProgress();}
+function setDone(n,v){state.done[n]=v;save(K('done'),state.done);var el=document.getElementById(FLEX&&n===FLEX.doneKey?'dayflex':'day'+n);if(el)el.classList.toggle('done',v);updateProgress();}
 function updateProgress(){
- var c=0,i;
- for(i=1;i<=9;i++)if(state.done[i])c++;
- if(state.done[10])c+=4;
- for(i=14;i<=16;i++)if(state.done[i])c++;
- document.getElementById('progBar').style.width=(c/16*100)+'%';
- document.getElementById('progTxt').textContent='已完成 '+c+' / 16 天'+(c===16?' · 全程收官!':'');
+ var total=DAYS.length+(FLEX?FLEX.daysCount:0),c=0;
+ DAYS.forEach(function(d){if(state.done[d.n])c++;});
+ if(FLEX&&state.done[FLEX.doneKey])c+=FLEX.daysCount;
+ document.getElementById('progBar').style.width=(c/total*100)+'%';
+ document.getElementById('progTxt').textContent='已完成 '+c+' / '+total+' 天'+(c===total?' · 全程收官!':'');
 }
 
 /* ============ 文史导览 ============ */
 function renderCulture(){
- var groups=[['out','去程 · D1–D6'],['cd','成都段 · D7–D9'],['flex','机动四天 · D10–D13'],['back','回程 · D14–D16']];
+ var groups=CULTURE.groups;
  var html='';
  groups.forEach(function(g){
   html+='<div class="cul-group"><span>'+g[1]+'</span></div>';
@@ -756,14 +754,14 @@ function renderToday(){
  for(var i=0;i<DAYS.length;i++){if(DAYS[i].full===t){hit=DAYS[i];break;}}
  var html='';
  if(hit){html='<div class="big">今天 D'+hit.n+' · '+hit.title+'</div><div class="dim">'+hit.meta+'</div><ul style="margin:6px 0 0;padding-left:18px">'+lis(hit.plan)+'</ul>';}
- else if(t>='2026-08-03'&&t<='2026-08-06'){var c=flexChoice();var rowMap={'2026-08-03':0,'2026-08-04':1,'2026-08-05':2,'2026-08-06':3};html='<div class="big">今天 '+FLEX_OPTS[c].name+'</div><div class="dim">'+FLEX_OPTS[c].rows[rowMap[t]][1]+'</div>';}
- else if(t<'2026-07-25'){html='<div class="big">明天出发!</div><div class="dim">今晚请完成:湖北省博物馆(7.26)、九寨沟 8.4(方案A保险)两项预约;检查车辆、备齐证件(身份证、驾驶证、行驶证、电子保单)。</div>';}
- else if(t>'2026-08-09'){html='<div class="big">行程已结束</div><div class="dim">欢迎回家,记得整理照片和孩子的心得。</div>';}
+ else if(FLEX&&t>=FLEX.dateStart&&t<=FLEX.dateEnd){var c=flexChoice();var idx=Math.round((new Date(t)-new Date(FLEX.dateStart))/86400000);var rows=FLEX_OPTS[c].rows;var row=rows[Math.max(0,Math.min(idx,rows.length-1))];html='<div class="big">今天 '+FLEX_OPTS[c].name+'</div><div class="dim">'+row[1]+'</div>';}
+ else if(t<META.dateStart){html='<div class="big">明天出发!</div><div class="dim">'+META.preDepartNote+'</div>';}
+ else if(t>META.dateEnd){html='<div class="big">行程已结束</div><div class="dim">'+META.endNote+'</div>';}
  else{html='<div class="dim">今天对应日程见行程页。</div>';}
  el.innerHTML=html;
- var openN=hit?hit.n:(t<'2026-07-25'?1:null);
- if(t>='2026-08-03'&&t<='2026-08-06')openN=10;
- if(openN){var el2=document.getElementById(openN===10?'dayflex':'day'+openN);if(el2)el2.classList.add('open');}
+ var openN=hit?hit.n:(t<META.dateStart?DAYS[0].n:null);
+ if(FLEX&&t>=FLEX.dateStart&&t<=FLEX.dateEnd)openN=FLEX.doneKey;
+ if(openN){var el2=document.getElementById(FLEX&&openN===FLEX.doneKey?'dayflex':'day'+openN);if(el2)el2.classList.add('open');}
 }
 
 /* ============ 文史地雷达 ============ */

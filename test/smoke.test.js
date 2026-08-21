@@ -8,3 +8,15 @@ assert.ok(document.getElementById('progTxt').textContent.includes('/ 16 天'),'�
 assert.ok(document.getElementById('sec1').innerHTML.includes('id="dayflex"'),'时间轴应含机动卡');
 assert.ok((document.getElementById('sec1').innerHTML.match(/class="day[ "]/g)||[]).length===13,'12 天卡+1 机动卡');
 console.log('smoke.test.js: Task4 段通过');
+
+// 接 Task4 段之后
+ctx.fmtDate=function(){return '2026-08-04';};ctx.renderToday();
+assert.ok(document.getElementById('todayBody').innerHTML.includes('方案'),'机动期今日卡应显示所选方案');
+ctx.fmtDate=function(){return '2026-07-24';};ctx.renderToday();
+assert.ok(document.getElementById('todayBody').innerHTML.includes('明天出发'),'出发前文案应来自 meta.preDepartNote');
+ctx.fmtDate=function(){return '2026-08-10';};ctx.renderToday();
+assert.ok(document.getElementById('todayBody').innerHTML.includes('行程已结束'),'结束后文案');
+ctx.setDone(10,true);
+assert.ok(document.getElementById('progTxt').textContent.includes('4 / 16'),'机动 doneKey 应计 daysCount 天');
+ctx.setDone(10,false);
+console.log('smoke.test.js: Task5 段通过');
