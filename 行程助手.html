@@ -1001,6 +1001,7 @@ function openPlanner(){
   baked:{pois:null,poiDetail:null,radarExtra:null,bookings:null,flex:null,wxCities:null,wxRules:null,legInfo:null},
   verify:null,log:[]};
  wizErr=null;
+ if(PLANNER.step===2)return resumeBake();   // 断点续跑:烘焙中途退出过,从断点继续
  wizRender();
 }
 function exitPlanner(){savePlanner();location.reload();}
@@ -1009,7 +1010,8 @@ function wizRender(){
  h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px"><b style="font-size:18px">新建行程</b><span class="dim" style="cursor:pointer;font-size:13px" onclick="exitPlanner()">← 返回行程库</span></div>';
  if(PLANNER.step===0)h+=wizStep0();
  else if(PLANNER.step===1)h+=wizStep1();
- else h+='<div class="dim" style="margin:40px 0;text-align:center;line-height:2">步骤 '+PLANNER.step+'(烘焙/验证/完成)建设中,后续任务接入。</div>';
+ else if(PLANNER.step===2)h+=wizStep2();
+ else h+='<div class="dim" style="margin:40px 0;text-align:center;line-height:2">步骤 '+PLANNER.step+'(验证/完成)建设中,后续任务接入。</div>';
  h+='</div>';
  document.body.innerHTML=h;
 }
@@ -1144,7 +1146,280 @@ function wizStep1(){
  h+='<button class="btn" style="flex:1" onclick="startBake()">确认骨架,开始烘焙</button></div>';
  return h;
 }
-function startBake(){alert('烘焙模块下一任务接入');}
+/* ---- M3-T2 分批烘焙(S2)+ 断点续跑 ---- */
+// 批次按依赖序执行:poiDetail 契约要求覆盖 pois+radarExtra 全量点名,故 radarExtra 排在 poiDetail 前
+var BAKE_BATCHES=[
+ {key:'pois',name:'沿途点位',run:bakePois},
+ {key:'radarExtra',name:'雷达补充点',run:bakeRadar},
+ {key:'poiDetail',name:'讲解内容',run:bakeDetail},
+ {key:'flex',name:'机动方案',skip:function(){return !(PLANNER.req&&PLANNER.req.needFlex&&PLANNER.skeleton&&PLANNER.skeleton.flex);},run:bakeFlex},
+ {key:'bookings',name:'预约提醒',run:bakeBookings},
+ {key:'wx',name:'天气城市',out:'wxCities',run:bakeWx},
+ {key:'legInfo',name:'路段信息',run:bakeLegs}
+];
+var bakeStat={};   // 批次 key → 'run'/'fail',完成/未开始为 null(完成态以 baked 值为准,保证续跑幂等)
+function bakeLog(msg){
+ if(!PLANNER.log)PLANNER.log=[];
+ PLANNER.log.push(msg);
+ if(PLANNER.log.length>60)PLANNER.log.shift();
+}
+function startBake(){
+ if(!PLANNER||!PLANNER.skeleton)return Promise.reject(new Error('还没有骨架'));
+ PLANNER.step=2;bakeStat={};
+ savePlanner();wizRender();
+ return bakeNext();
+}
+function resumeBake(){
+ if(!PLANNER||!PLANNER.skeleton)return Promise.reject(new Error('没有可续跑的草稿'));
+ bakeStat={};wizRender();
+ return bakeNext();
+}
+function bakeNext(){
+ var b=null;
+ for(var i=0;i<BAKE_BATCHES.length;i++){var c=BAKE_BATCHES[i];
+  if(c.skip&&c.skip())continue;
+  if(PLANNER.baked[c.out||c.key]==null){b=c;break;}   // 已有值的批跳过:断点续跑天然幂等
+ }
+ if(!b){
+  PLANNER.step=3;savePlanner();
+  startVerify();
+  return Promise.resolve();
+ }
+ bakeStat[b.key]='run';bakeLog('开始:'+b.name);wizRender();
+ return b.run().then(function(){
+  bakeStat[b.key]=null;bakeLog('完成:'+b.name);
+  savePlanner();wizRender();          // 每批成功立即落盘
+  return bakeNext();
+ }).catch(function(e){
+  bakeStat[b.key]='fail';bakeLog('失败:'+b.name+'('+(e.message||e)+')');
+  savePlanner();wizRender();          // 标 ❌ + 重试按钮,链停在这里等用户
+ });
+}
+function wizStep2(){
+ var h='<div class="dim" style="margin-bottom:10px">第 3 步 · 分批烘焙:逐批生成,每批完成即存档,中途退出可断点续跑。</div>';
+ var anyFail=false;
+ BAKE_BATCHES.forEach(function(b){
+  if(b.skip&&b.skip())return;
+  var done=PLANNER.baked[b.out||b.key]!=null,st=bakeStat[b.key];
+  if(st==='fail')anyFail=true;
+  var icon=done?'✅':(st==='fail'?'❌':(st==='run'?'⏳':'<span class="dim">○</span>'));
+  h+='<div style="background:#fff;border-radius:12px;padding:10px 14px;margin:8px 0;box-shadow:0 1px 4px rgba(0,0,0,.08);display:flex;justify-content:space-between;align-items:center">';
+  h+='<span>'+icon+' '+b.name+'</span>';
+  if(st==='fail')h+='<button class="btn" onclick="bakeNext()">重试</button>';
+  h+='</div>';
+ });
+ if(anyFail)h+='<div style="color:var(--cinn);font-size:13px;margin:6px 0">有批次失败,点对应行的「重试」即可继续。</div>';
+ h+='<div class="dim" style="font-size:12px;background:#fff;border-radius:12px;padding:10px 14px;margin-top:10px;line-height:1.7;max-height:180px;overflow:auto">';
+ h+=(PLANNER.log&&PLANNER.log.length?PLANNER.log.slice().reverse().join('<br>'):'等待开始…');
+ h+='</div>';
+ return h;
+}
+// 单批调用:dsJSON + 结构自检,不合格把原因喂回自动重试一次,仍不合格 throw(由 bakeNext 标 ❌)
+function bakeCall(mkPrompt,check,opts){
+ return dsJSON(mkPrompt(null),opts).then(function(r){
+  var e=check(r);
+  if(!e)return r;
+  return dsJSON(mkPrompt(e),opts).then(function(r2){
+   var e2=check(r2);
+   if(e2)throw new Error(e2);
+   return r2;
+  });
+ });
+}
+function bakeBaseReq(){
+ return '所有地点必须真实存在、可公开查证;坐标给 WGS-84 估算值;文字用 '+PLANNER.req.kidAge+' 岁孩子能懂的口吻;禁用"魅力""底蕴""震撼"等空话。';
+}
+// B1 pois:每 4 天一批
+function poisPrompt(days,err){
+ var s=PLANNER.skeleton;
+ var segKeys=((s.culture&&s.culture.groups)||[]).map(function(g){return g[0];});
+ var p='亲子行程「'+s.meta.title+'」('+s.meta.routeLine+','+s.meta.dateStart+' 出发)。\n';
+ p+='第 '+days[0].n+'~'+days[days.length-1].n+' 天安排:'+JSON.stringify(days.map(function(d){return {n:d.n,full:d.full,title:d.title,plan:d.plan};}))+'\n';
+ p+='请为这几天生成沿途点位(每天 2-4 个,博物馆/古迹/地貌观景点),只输出 JSON 数组:'
+  +'[{name,lat,lng,day,seg,pass,info,cat,q}]。day 形如 "D'+days[0].n+'";seg 从这些值里选:'+segKeys.join('/')+';'
+  +'cat 从 文/史/地/科 选;pass 表示是否顺路经过;info 一两句给孩子看的介绍;q 一个启发思考的问题。\n';
+ p+=bakeBaseReq()+'\n';
+ if(err)p+='上一次结果不合格:'+err+',请修正后重新输出。\n';
+ return p;
+}
+function checkPois(r){
+ if(!Array.isArray(r)||!r.length)return '点位结果不是非空数组';
+ for(var i=0;i<r.length;i++){var x=r[i];
+  if(!x||typeof x.name!=='string'||!x.name)return '第'+(i+1)+'个缺 name';
+  if(typeof x.lat!=='number'||typeof x.lng!=='number')return x.name+' 坐标缺失或不是数字';
+  if(typeof x.day!=='string'||!x.day)return x.name+' 缺 day';
+  if(typeof x.seg!=='string'||!x.seg)return x.name+' 缺 seg';
+  if(typeof x.info!=='string'||!x.info)return x.name+' 缺 info';
+  if(typeof x.cat!=='string'||!x.cat)return x.name+' 缺 cat';}
+ return null;
+}
+function bakePois(){
+ var days=PLANNER.skeleton.days,out=[],chain=Promise.resolve();
+ for(var i=0;i<days.length;i+=4)(function(chunk){
+  chain=chain.then(function(){
+   return bakeCall(function(err){return poisPrompt(chunk,err);},checkPois,{maxTokens:4000})
+    .then(function(r){out=out.concat(r);});
+  });
+ })(days.slice(i,i+4));
+ return chain.then(function(){PLANNER.baked.pois=out;});
+}
+// B3 radarExtra:走廊补充点(排在 poiDetail 前,后者要覆盖它的点名)
+function radarPrompt(err){
+ var s=PLANNER.skeleton;
+ var have=(PLANNER.baked.pois||[]).map(function(x){return x.name;});
+ var p='亲子行程「'+s.meta.title+'」路线:'+s.meta.routeLine+';已有沿途地点:'+have.join('、')+'。\n';
+ p+='请再推荐 3-6 个路线走廊上的补充点(顺路可看的备选,不必专程前往),只输出 JSON 数组:'
+  +'[{n,c,lat,lng,info,q}],c 从 文/史/地/科 选,info 给孩子看,q 是思考问题。\n';
+ p+=bakeBaseReq()+'\n';
+ if(err)p+='上一次结果不合格:'+err+',请修正后重新输出。\n';
+ return p;
+}
+function checkRadar(r){
+ if(!Array.isArray(r))return '补充点结果不是数组';
+ for(var i=0;i<r.length;i++){var x=r[i];
+  if(!x||typeof x.n!=='string'||!x.n)return '第'+(i+1)+'个缺 n';
+  if(typeof x.lat!=='number'||typeof x.lng!=='number')return x.n+' 坐标缺失或不是数字';
+  if(typeof x.c!=='string'||!x.c)return x.n+' 缺分类 c';}
+ return null;
+}
+function bakeRadar(){
+ return bakeCall(radarPrompt,checkRadar,{maxTokens:3000}).then(function(r){PLANNER.baked.radarExtra=r;});
+}
+// B2 poiDetail:每 6 个点一批,覆盖 pois+radarExtra 全量
+function detailPrompt(names,err){
+ var p='亲子行程中有这些地点:'+names.join('、')+'。\n';
+ p+='请逐个生成给孩子看的讲解,只输出 JSON 对象:{地点名:{story,see,fact,think}}。'
+  +'story 一段背景故事;see 现场看点数组,必须正好 3 条;fact 一个冷知识;think 一个启发问题。'
+  +'用 '+PLANNER.req.kidAge+' 岁孩子能懂的口吻,史实要准确。\n';
+ p+=bakeBaseReq()+'\n';
+ if(err)p+='上一次结果不合格:'+err+',请修正后重新输出。\n';
+ return p;
+}
+function detailCheck(names){
+ return function(r){
+  if(!r||typeof r!=='object'||Array.isArray(r))return '讲解结果不是对象';
+  for(var i=0;i<names.length;i++){var d=r[names[i]];
+   if(!d||typeof d!=='object')return '缺「'+names[i]+'」的讲解';
+   if(typeof d.story!=='string'||!d.story)return names[i]+' 缺 story';
+   if(!Array.isArray(d.see)||d.see.length!==3)return names[i]+' 的 see 应为 3 条';
+   if(typeof d.fact!=='string'||!d.fact)return names[i]+' 缺 fact';
+   if(typeof d.think!=='string'||!d.think)return names[i]+' 缺 think';}
+  return null;
+ };
+}
+function bakeDetail(){
+ var names=(PLANNER.baked.pois||[]).map(function(x){return x.name;})
+  .concat((PLANNER.baked.radarExtra||[]).map(function(x){return x.n;}));
+ var merged={},chain=Promise.resolve();
+ for(var i=0;i<names.length;i+=6)(function(chunk){
+  chain=chain.then(function(){
+   return bakeCall(function(err){return detailPrompt(chunk,err);},detailCheck(chunk),{maxTokens:6000})
+    .then(function(r){Object.keys(r).forEach(function(k){merged[k]=r[k];});});
+  });
+ })(names.slice(i,i+6));
+ return chain.then(function(){PLANNER.baked.poiDetail=merged;});
+}
+// B4 flex:needFlex 才跑,每个 option 一批补 rows/know
+function flexPrompt(opt,err){
+ var s=PLANNER.skeleton;
+ var p='亲子行程「'+s.meta.title+'」需要机动方案「'+opt.name+'」('+opt.short+',锚点 '+opt.anchor+',说明:'+opt.note+'),共 '+s.flex.daysCount+' 天。\n';
+ p+='请为这套机动方案补全逐日安排 rows(每天含 title/plan/know 完整内容)和方案级 know 提示数组,只输出 JSON:{rows:[...],know:[...]}。\n';
+ p+=bakeBaseReq()+'\n';
+ if(err)p+='上一次结果不合格:'+err+',请修正后重新输出。\n';
+ return p;
+}
+function checkFlexPart(r){
+ if(!r||typeof r!=='object'||Array.isArray(r))return '机动方案结果不是对象';
+ if(!Array.isArray(r.rows)||!r.rows.length)return '机动方案 rows 为空';
+ if(!Array.isArray(r.know))return '机动方案 know 缺失';
+ return null;
+}
+function bakeFlex(){
+ var flex=JSON.parse(JSON.stringify(PLANNER.skeleton.flex)),chain=Promise.resolve();
+ flex.options.forEach(function(opt){
+  chain=chain.then(function(){
+   return bakeCall(function(err){return flexPrompt(opt,err);},checkFlexPart,{maxTokens:6000})
+    .then(function(r){opt.rows=r.rows;opt.know=r.know;});
+  });
+ });
+ return chain.then(function(){PLANNER.baked.flex=flex;});
+}
+// B5 bookings:due 按行程日期倒推
+function bookingsPrompt(err){
+ var s=PLANNER.skeleton,req=PLANNER.req;
+ var p='亲子行程「'+s.meta.title+'」:'+s.meta.routeLine+','+s.meta.dateStart+' 至 '+s.meta.dateEnd+',主题「'+req.theme+'」。\n';
+ p+='请列出行前需要提前预约的事项(热门博物馆/场馆门票等),due 按参观日期倒推(热门场馆一般提前 7-14 天放票),due 用 YYYY-MM-DD。'
+  +'只输出 JSON 数组:[{due,what,how}]。\n';
+ p+=bakeBaseReq()+'\n';
+ if(err)p+='上一次结果不合格:'+err+',请修正后重新输出。\n';
+ return p;
+}
+function checkBookings(r){
+ if(!Array.isArray(r))return '预约清单不是数组';
+ for(var i=0;i<r.length;i++){var x=r[i];
+  if(!x||typeof x.due!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(x.due))return '第'+(i+1)+'条 due 不是 ISO 日期';
+  if(typeof x.what!=='string'||!x.what)return '第'+(i+1)+'条缺 what';
+  if(typeof x.how!=='string'||!x.how)return '第'+(i+1)+'条缺 how';}
+ return null;
+}
+function bakeBookings(){
+ return bakeCall(bookingsPrompt,checkBookings,{maxTokens:3000}).then(function(r){PLANNER.baked.bookings=r;});
+}
+// B6 wxCities(+有 flex 才生成 wxRules)
+function wxPrompt(err){
+ var s=PLANNER.skeleton;
+ var p='亲子行程途经城市:'+((s.wxCityNames||[]).join('、'))+'。\n';
+ p+='请整理成天气城市列表,给出每个城市中心点的 WGS-84 经纬度,只输出 JSON:{wxCities:[{name,short,lat,lng,role:null}],wxRules:null}。';
+ if(s.flex)p+='本行程有机动方案,wxRules 请生成天气决策规则:{windowLabel,failText,unknownText,rules:[{option,maxProb,maxSum,say}]}(rules 最后一条为无阈值兜底)。';
+ p+='\n'+bakeBaseReq()+'\n';
+ if(err)p+='上一次结果不合格:'+err+',请修正后重新输出。\n';
+ return p;
+}
+function checkWx(r){
+ if(!r||typeof r!=='object'||!Array.isArray(r.wxCities)||!r.wxCities.length)return '天气城市列表为空';
+ for(var i=0;i<r.wxCities.length;i++){var c=r.wxCities[i];
+  if(!c||typeof c.name!=='string'||!c.name)return '第'+(i+1)+'个城市缺 name';
+  if(typeof c.lat!=='number'||typeof c.lng!=='number')return c.name+' 坐标缺失或不是数字';}
+ var want=PLANNER.skeleton.wxCityNames||[];
+ for(var j=0;j<want.length;j++){
+  if(!r.wxCities.some(function(c){return c.name===want[j];}))return '缺城市 '+want[j];}
+ return null;
+}
+function bakeWx(){
+ return bakeCall(wxPrompt,checkWx,{maxTokens:3000}).then(function(r){
+  PLANNER.baked.wxCities=r.wxCities;
+  PLANNER.baked.wxRules=(PLANNER.skeleton.flex&&r.wxRules)?r.wxRules:null;
+ });
+}
+// B7 legInfo:每段 {day,h,note,pois[],goto}
+function legPrompt(err){
+ var s=PLANNER.skeleton;
+ var names=(PLANNER.baked.pois||[]).map(function(x){return x.name;})
+  .concat((PLANNER.baked.radarExtra||[]).map(function(x){return x.n;}));
+ var p='亲子行程「'+s.meta.title+'」含以下路段:'+s.legs.map(function(l){return l.id+'('+l.label+')';}).join(';')+'。\n';
+ p+='逐日安排:'+JSON.stringify(s.days.map(function(d){return {n:d.n,full:d.full,wd:d.wd,title:d.title};}))+'\n';
+ p+='请为每个路段生成行车信息,只输出 JSON 对象:{路段id:{day,h,note,pois,goto}}。'
+  +'day 形如 "D2 · 10.2 周五";h 预计时长如 "约2.5h";note 一句话说沿途看什么;'
+  +'pois 从以下名字中选取顺路停靠的:'+names.join('、')+';goto 为对应的天数(字符串)。\n';
+ p+=bakeBaseReq()+'\n';
+ if(err)p+='上一次结果不合格:'+err+',请修正后重新输出。\n';
+ return p;
+}
+function checkLegs(r){
+ if(!r||typeof r!=='object'||Array.isArray(r))return '路段信息不是对象';
+ var legs=PLANNER.skeleton.legs;
+ for(var i=0;i<legs.length;i++){var x=r[legs[i].id];
+  if(!x||typeof x!=='object')return '缺路段 '+legs[i].id;
+  if(typeof x.day!=='string'||!x.day)return legs[i].id+' 缺 day';
+  if(typeof x.h!=='string'||!x.h)return legs[i].id+' 缺 h';
+  if(typeof x.note!=='string'||!x.note)return legs[i].id+' 缺 note';
+  if(!Array.isArray(x.pois))return legs[i].id+' 的 pois 应为数组';}
+ return null;
+}
+function bakeLegs(){
+ return bakeCall(legPrompt,checkLegs,{maxTokens:3000}).then(function(r){PLANNER.baked.legInfo=r;});
+}
+function startVerify(){alert('验证模块下一任务接入');}
 
 /* ============ 启动 ============ */
 function validatePack(p){
