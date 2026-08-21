@@ -1,0 +1,1213 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="description" content="无锡—武汉—奉节—重庆—成都—宜昌 16 天亲子自驾:行程、文史导览、真实道路地图、天气决策与预约提醒。">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%232f6f5e'/%3E%3Cpath d='M14 44 L24 26 L32 38 L40 22 L50 44 Z' fill='%23e8cf83'/%3E%3Crect x='14' y='48' width='36' height='3' rx='1.5' fill='%23f5f1e6'/%3E%3C/svg%3E">
+<title>诗路长江 · 无锡—成都亲子自驾 16 天</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700;9..144,900&family=Noto+Serif+SC:wght@600;700;900&display=swap">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
+<style>
+:root{
+  --bg:#fbf8f1; --card:#fffdf9; --ink:#26241f; --muted:#7d766b; --teal:#2f6f5e; --teal-lt:#e4efe9;
+  --cinn:#c0513f; --cinn-lt:#f9e9e5; --amber:#b8791f; --amber-lt:#f7eeda; --gold:#c9a45c;
+  --line:rgba(38,36,31,.08);
+  --fd:"Fraunces","Noto Serif SC","Songti SC","STSong","SimSun",serif;
+  --fnum:"Fraunces","Noto Serif SC",-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
+  --ease:cubic-bezier(.32,.72,0,1);
+  --shell:rgba(38,36,31,.045);
+  --shadow-card:0 1px 2px rgba(38,36,31,.03),0 12px 32px rgba(38,36,31,.05);
+  --shadow-lift:0 2px 4px rgba(38,36,31,.05),0 20px 46px rgba(38,36,31,.09);
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+html{-webkit-text-size-adjust:100%; scroll-behavior:smooth;}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  line-height:1.66; font-size:15px;
+}
+body::before{
+  content:""; position:fixed; inset:0; z-index:2; pointer-events:none; opacity:.045;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+::selection{background:var(--teal-lt);}
+h1,h2,h3{font-family:var(--fd); margin:0;}
+.eyebrow,.d-badge{font-family:var(--fnum);}
+.leg-km,.progress-txt,.hero .dates,.wx-day,.b-due,.route-line,#legInfo .l-meta{font-family:var(--fnum);}
+.wrap{max-width:720px; margin:0 auto; padding:0 16px 80px;}
+button{font-family:inherit;}
+button:focus-visible, input:focus-visible, a:focus-visible{outline:2px solid var(--teal); outline-offset:2px; border-radius:8px;}
+
+/* ===== 入场动画系统(IntersectionObserver) ===== */
+.rv{opacity:0; transform:translateY(22px); filter:blur(5px);}
+.rv.in{opacity:1; transform:translateY(0); filter:blur(0);}
+.day,.scard,.cul-item{transition:box-shadow .35s var(--ease), opacity .8s var(--ease), transform .8s var(--ease), filter .8s var(--ease);}
+.day.done{opacity:.55;}
+
+/* ===== Hero ===== */
+.hero{
+  position:relative; overflow:hidden; color:#f6f2e7; padding:52px 0 46px;
+  background:
+    radial-gradient(130% 160% at 8% -12%, rgba(201,164,92,.2), rgba(201,164,92,0) 48%),
+    linear-gradient(165deg,#203a32 0%,#2c6757 68%,#377c68 100%);
+}
+.hero::after{
+  content:""; position:absolute; left:0; right:0; bottom:0; height:64px; pointer-events:none;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 60' preserveAspectRatio='none'%3E%3Cpath d='M0 60 L0 42 L90 18 L170 44 L260 12 L350 46 L430 26 L520 48 L610 16 L700 44 L790 24 L880 50 L970 20 L1060 46 L1140 30 L1200 44 L1200 60 Z' fill='%23f6f2e7' fill-opacity='0.09'/%3E%3C/svg%3E") bottom/100% 100% no-repeat;
+}
+.hero .wrap{position:relative; z-index:1; padding-bottom:0;}
+.eyebrow{
+  display:inline-flex; align-items:center; gap:8px; padding:5px 14px; border-radius:999px;
+  border:1px solid rgba(246,242,231,.28); font-size:10px; letter-spacing:.32em; font-weight:600;
+  color:rgba(246,242,231,.85);
+}
+.eyebrow i{width:5px; height:5px; border-radius:50%; background:var(--gold); display:inline-block;}
+.hero h1{font-size:clamp(38px,9vw,58px); font-weight:900; letter-spacing:.14em; line-height:1.12; margin-top:18px; text-wrap:balance;}
+.hero .route{margin-top:12px; font-size:13px; letter-spacing:.14em; color:rgba(246,242,231,.78);}
+.hero .route b{color:var(--gold); font-weight:600;}
+.hero .dates{margin-top:6px; font-size:12px; color:rgba(246,242,231,.6); letter-spacing:.06em;}
+.progress{height:5px; background:rgba(246,242,231,.2); border-radius:999px; margin-top:20px; overflow:hidden;}
+.progress i{display:block; height:100%; width:0; background:linear-gradient(90deg,#b8944e,#e8cf83); border-radius:999px; transition:width .5s var(--ease); box-shadow:0 0 10px rgba(232,207,131,.45);}
+.progress-txt{font-size:11px; color:rgba(246,242,231,.75); margin-top:8px; letter-spacing:.12em;}
+
+/* ===== 浮动玻璃岛标签栏 ===== */
+.tabs{
+  position:-webkit-sticky; position:sticky; top:10px; z-index:900;
+  display:flex; margin:12px auto 0; width:calc(100% - 24px); max-width:520px; padding:4px;
+  background:rgba(251,248,241,.82); -webkit-backdrop-filter:blur(14px) saturate(1.2); backdrop-filter:blur(14px) saturate(1.2);
+  border:1px solid var(--line); border-radius:999px; box-shadow:0 8px 24px rgba(38,36,31,.09);
+}
+.tabs button{
+  flex:1; padding:9px 2px; border:0; border-radius:999px; background:none; font-size:13px; color:var(--muted);
+  cursor:pointer; letter-spacing:.05em; transition:all .35s var(--ease);
+}
+.tabs button:hover:not(.on){color:var(--ink); background:rgba(38,36,31,.05);}
+.tabs button.on{background:var(--teal); color:#fdfbf6; font-weight:600; box-shadow:0 3px 10px rgba(47,111,94,.32);}
+
+/* ===== sections ===== */
+section{display:none; padding-top:18px; position:relative; z-index:1;}
+section.on{display:block;}
+
+/* ===== Double-Bezel 卡片 ===== */
+.day,.scard,.cul-item,.map-shell{
+  background:var(--shell); border:1px solid rgba(38,36,31,.06); border-radius:26px; padding:6px;
+  box-shadow:var(--shadow-card);
+}
+.day:hover,.scard:hover,.cul-item:hover{box-shadow:var(--shadow-lift);}
+.d-core,.sc-core,.cul-core{
+  background:var(--card); border-radius:20px; overflow:hidden;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.65);
+}
+.day{margin-bottom:14px;}
+.d-head{display:flex; align-items:center; gap:12px; padding:14px 14px; cursor:pointer; user-select:none; -webkit-user-select:none; transition:background .25s var(--ease);}
+.d-head:hover{background:rgba(38,36,31,.025);}
+.d-badge{
+  flex:none; width:48px; height:48px; border-radius:15px; background:var(--teal-lt); color:var(--teal);
+  display:flex; align-items:center; justify-content:center; font-weight:700; font-size:13px;
+  box-shadow:inset 0 0 0 1px rgba(47,111,94,.14), inset 0 1px 0 rgba(255,255,255,.7);
+}
+.day.drive .d-badge{background:var(--amber-lt); color:var(--amber); box-shadow:inset 0 0 0 1px rgba(184,121,31,.16), inset 0 1px 0 rgba(255,255,255,.7);}
+.day.flex .d-badge{background:var(--cinn-lt); color:var(--cinn); box-shadow:inset 0 0 0 1px rgba(192,81,63,.16), inset 0 1px 0 rgba(255,255,255,.7);}
+.d-title{flex:1; min-width:0;}
+.d-title h3{font-size:16px; letter-spacing:.02em;}
+.d-meta{font-size:11.5px; color:var(--muted); margin-top:3px; font-variant-numeric:tabular-nums; letter-spacing:.04em;}
+.d-done{flex:none;}
+.d-done input{width:20px; height:20px; accent-color:var(--teal); cursor:pointer;}
+.d-body{display:none; padding:0 14px 14px 68px;}
+.day.open .d-body{display:block; animation:reveal .45s var(--ease);}
+@keyframes reveal{from{opacity:0; transform:translateY(-6px);} to{opacity:1; transform:translateY(0);}}
+.d-body h4{font-size:12px; color:var(--teal); margin:14px 0 5px; letter-spacing:.18em; font-weight:700;}
+.d-body ul{margin:0; padding-left:18px;}
+.d-body li{margin:5px 0;}
+.d-body .know li{list-style:none; position:relative;}
+.d-body .know li:before{content:"✦"; color:var(--gold); position:absolute; left:-18px; font-size:11px; top:3px;}
+.tags{margin-top:12px; display:flex; flex-wrap:wrap; gap:6px;}
+.tag{font-size:11px; padding:4px 10px; border-radius:8px; background:var(--cinn-lt); color:var(--cinn); letter-spacing:.04em;}
+.tag.info{background:var(--teal-lt); color:var(--teal);}
+
+/* ===== 方案切换(button-in-shell) ===== */
+.flex-sw{display:flex; gap:4px; margin:12px 0; background:rgba(38,36,31,.05); border:1px solid rgba(38,36,31,.06); border-radius:999px; padding:4px;}
+.flex-sw button{
+  flex:1; padding:9px 2px; border-radius:999px; border:0; background:transparent;
+  font-size:12px; cursor:pointer; color:var(--muted); letter-spacing:.02em; transition:all .3s var(--ease);
+}
+.flex-sw button:hover:not(.on){color:var(--ink);}
+.flex-sw button:active{transform:scale(.96);}
+.flex-sw button.on{background:var(--teal); color:#fdfbf6; font-weight:600; box-shadow:0 3px 9px rgba(47,111,94,.3);}
+.flex-note{font-size:12px; color:var(--muted); background:rgba(38,36,31,.03); border-radius:10px; padding:9px 11px; margin-top:8px; border-left:3px solid var(--line);}
+
+/* ===== 地图 ===== */
+.map-shell{padding:6px;}
+#map{width:100%; height:66vh; min-height:400px; border-radius:20px; z-index:1;}
+.map-bar{display:flex; gap:10px; margin:14px 0 12px; flex-wrap:wrap;}
+.btn{
+  display:inline-flex; align-items:center; gap:10px; border:1px solid var(--teal); background:var(--teal); color:#fdfbf6;
+  padding:5px 5px 5px 18px; border-radius:999px; font-size:14px; cursor:pointer;
+  box-shadow:0 4px 14px rgba(47,111,94,.25); transition:transform .2s var(--ease), box-shadow .25s var(--ease), background .2s var(--ease);
+}
+.btn:hover{transform:translateY(-1px); box-shadow:0 8px 20px rgba(47,111,94,.3);}
+.btn:active{transform:scale(.97);}
+.btn .b-ic{
+  width:32px; height:32px; border-radius:50%; background:rgba(255,255,255,.16);
+  display:flex; align-items:center; justify-content:center; font-size:14px;
+  transition:transform .35s var(--ease);
+}
+.btn:hover .b-ic{transform:translate(2px,-2px) scale(1.06);}
+.btn.ghost{background:var(--card); color:var(--teal); box-shadow:var(--shadow-card);}
+.btn.ghost .b-ic{background:rgba(47,111,94,.1);}
+.btn.ghost:hover{background:var(--teal-lt);}
+.map-hint{font-size:12px; color:var(--muted); margin:10px 2px;}
+.legend{display:flex; flex-wrap:wrap; gap:12px; font-size:11.5px; color:var(--muted); margin-top:10px; letter-spacing:.02em;}
+.legend i{display:inline-block; width:14px; height:4px; border-radius:2px; margin-right:5px; vertical-align:middle;}
+.leg-km{background:#fffdf9 !important; border:1px solid rgba(38,36,31,.1) !important; border-radius:999px !important; padding:2px 10px !important; font-size:12px !important; color:var(--teal) !important; font-weight:700; box-shadow:0 2px 8px rgba(38,36,31,.12) !important;}
+.leg-km:before{display:none !important;}
+.leaflet-overlay-pane path{cursor:pointer;}
+#legInfo{display:none; margin-top:12px;}
+#legInfo.on{display:block; animation:reveal .45s var(--ease);}
+#legInfo h4{margin:0 0 4px; font-size:15px; color:var(--teal); font-family:var(--fd); letter-spacing:.03em;}
+#legInfo .l-meta{font-size:12px; color:var(--muted); margin-bottom:6px;}
+#legInfo .l-poi{border-top:1px dashed var(--line); padding:8px 0;}
+#legInfo .l-poi b{font-size:13px;}
+#legInfo .l-poi p{margin:2px 0 0; font-size:12px; color:var(--muted); line-height:1.65;}
+#legInfo .l-link{display:inline-block; margin-top:10px; font-size:13px; color:var(--teal); text-decoration:underline; cursor:pointer;}
+#roadBox{font-size:12px;color:var(--muted);margin-top:10px;background:rgba(38,36,31,.03);border:1px solid var(--line);border-radius:12px;padding:10px 12px;line-height:1.7;font-variant-numeric:tabular-nums;}
+#roadBox b{color:var(--teal);}
+
+/* ===== 文史 ===== */
+.cul-group{margin:20px 0 10px; display:flex; align-items:center; gap:10px;}
+.cul-group span{font-family:var(--fd); font-size:16px; color:var(--teal); letter-spacing:.1em; white-space:nowrap;}
+.cul-group:after{content:""; flex:1; height:1px; background:var(--line);}
+.cul-item{margin-bottom:10px;}
+.cul-core{display:flex; gap:12px; padding:12px 13px; align-items:flex-start;}
+.cul-day{flex:none;min-width:46px;height:26px;border-radius:9px;background:var(--teal-lt);color:var(--teal);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 6px;letter-spacing:.02em;}
+.cul-day.pass{background:var(--amber-lt);color:var(--amber);}
+.cul-item b{font-size:14px; letter-spacing:.02em;}
+.cul-item p{margin:3px 0 0;font-size:13px;color:var(--muted);line-height:1.66;}
+
+/* ===== 智能助手卡 ===== */
+.scard{margin-bottom:14px;}
+.sc-core{padding:16px 16px;}
+.scard h3{font-size:16px; margin-bottom:10px; color:var(--teal); letter-spacing:.04em; display:flex; align-items:center; gap:8px;}
+.scard h3:before{content:""; width:6px; height:6px; border-radius:50%; background:var(--gold); flex:none;}
+.scard h3 .en{font-size:10px; color:var(--muted); font-family:-apple-system,sans-serif; margin-left:2px; font-weight:400; letter-spacing:.08em;}
+.big{font-size:17px; font-weight:600;}
+.dim{color:var(--muted); font-size:13px;}
+.wx-city{margin-bottom:12px;}
+.wx-city b{font-size:13px; letter-spacing:.05em;}
+.wx-days{display:flex; gap:6px; flex-wrap:wrap; margin-top:5px;}
+.wx-day{background:rgba(38,36,31,.03); border:1px solid var(--line); border-radius:10px; padding:5px 8px; font-size:11px; text-align:center; min-width:52px;}
+.wx-day .ic{font-size:17px; display:block; margin-bottom:1px;}
+.verdict{border-radius:12px; padding:11px 13px; margin-top:12px; font-size:14px; border-left:4px solid transparent;}
+.verdict.A{background:var(--teal-lt); color:var(--teal); border-left-color:var(--teal);}
+.verdict.B{background:var(--amber-lt); color:var(--amber); border-left-color:var(--amber);}
+.verdict.unk{background:rgba(38,36,31,.05); color:var(--muted); border-left-color:var(--line);}
+.book{display:flex; gap:10px; align-items:flex-start; padding:11px 0; border-bottom:1px dashed var(--line);}
+.book:last-child{border-bottom:0;}
+.book input{width:19px; height:19px; margin-top:3px; accent-color:var(--teal); flex:none; cursor:pointer;}
+.book .b-txt{flex:1; font-size:14px;}
+.book .b-how{font-size:12px; color:var(--muted); margin-top:1px;}
+.book .b-due{flex:none; font-size:11px; padding:3px 9px; border-radius:999px; background:rgba(38,36,31,.06); color:var(--muted); white-space:nowrap;}
+.book.urgent .b-due{background:var(--cinn); color:#fdfbf6;}
+.book.soon .b-due{background:var(--amber); color:#fdfbf6;}
+.book.done .b-txt{text-decoration:line-through; opacity:.5;}
+.route-line{font-size:14px; padding:7px 0;}
+.route-line b{color:var(--teal);}
+.km-diff{font-size:13px; margin-top:10px; padding:9px 11px; border-radius:10px; background:rgba(38,36,31,.03); border-left:3px solid var(--teal);}
+.foot{font-size:11px; color:var(--muted); margin-top:18px; line-height:1.75;}
+
+/* ===== skeleton ===== */
+.skl{border-radius:10px; background:linear-gradient(90deg,rgba(38,36,31,.06) 25%,rgba(38,36,31,.02) 50%,rgba(38,36,31,.06) 75%); background-size:200% 100%; animation:shimmer 1.6s var(--ease) infinite;}
+@keyframes shimmer{from{background-position:180% 0;} to{background-position:-80% 0;}}
+
+/* ===== 文史地雷达 ===== */
+.radar-filters{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 10px;}
+.rf{padding:5px 12px;border-radius:999px;border:1px solid var(--line);background:var(--card);font-size:12px;color:var(--muted);cursor:pointer;transition:all .25s var(--ease);}
+.rf.on{background:var(--teal);border-color:var(--teal);color:#fdfbf6;}
+.rf.route.on{background:var(--gold);border-color:var(--gold);}
+.radar-actions{display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;}
+.btn.sm{padding:4px 4px 4px 14px;font-size:13px;}
+.btn.sm .b-ic{width:26px;height:26px;font-size:12px;}
+#radarStatus{margin:6px 0 10px;}
+.r-item{display:flex;gap:10px;align-items:flex-start;padding:10px 2px;border-top:1px dashed var(--line);cursor:pointer;}
+.r-item:first-child{border-top:0;}
+.r-cat{flex:none;width:22px;height:22px;border-radius:7px;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;}
+.r-main{flex:1;min-width:0;}
+.r-main b{font-size:13.5px;}
+.r-main p{margin:2px 0 0;font-size:12px;color:var(--muted);line-height:1.6;}
+.r-main .r-q{color:var(--amber);font-style:italic;}
+.r-dist{flex:none;font-size:11px;color:var(--muted);text-align:right;font-family:var(--fnum);line-height:1.5;}
+.r-ai{display:inline-block;margin-left:6px;padding:1px 6px;border-radius:6px;background:var(--amber-lt);color:var(--amber);font-size:10px;font-weight:600;vertical-align:1px;}
+.ai-key{margin-top:10px;padding:10px;border-radius:12px;background:rgba(38,36,31,.03);border:1px dashed var(--line);}
+.ai-key input{width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:10px;font-size:13px;margin:6px 0 8px;font-family:inherit;background:var(--card);color:var(--ink);box-sizing:border-box;}
+/* ===== 详情弹层(底部上滑) ===== */
+#poiSheetBk{position:fixed;inset:0;background:rgba(38,36,31,.35);z-index:1200;opacity:0;pointer-events:none;transition:opacity .3s var(--ease);}
+#poiSheetBk.on{opacity:1;pointer-events:auto;}
+#poiSheet{position:fixed;left:0;right:0;bottom:0;z-index:1201;background:var(--card);border-radius:22px 22px 0 0;max-height:76vh;overflow-y:auto;transform:translateY(105%);transition:transform .45s var(--ease);box-shadow:0 -8px 40px rgba(38,36,31,.25);padding:8px 18px 28px;max-width:720px;margin:0 auto;}
+#poiSheet.on{transform:translateY(0);}
+#poiSheet .ps-grip{width:44px;height:5px;border-radius:3px;background:var(--line);margin:6px auto 10px;}
+#poiSheet .ps-head{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+#poiSheet .ps-head b{flex:1;font-size:17px;font-family:var(--fd);letter-spacing:.02em;}
+#poiSheet .ps-cat{flex:none;font-size:11px;padding:2px 9px;border-radius:999px;color:#fff;}
+#poiSheet .ps-x{flex:none;width:30px;height:30px;border-radius:50%;border:1px solid var(--line);background:var(--card);font-size:16px;color:var(--muted);cursor:pointer;}
+#poiSheet h4{font-size:12px;color:var(--teal);letter-spacing:.16em;margin:14px 0 5px;font-weight:700;}
+#poiSheet p{margin:0;font-size:14px;line-height:1.7;}
+#poiSheet ul{margin:0;padding-left:18px;font-size:14px;}
+#poiSheet li{margin:4px 0;}
+#poiSheet .ps-think{color:var(--amber);font-style:italic;}
+#poiSheet .ps-src{font-size:11px;color:var(--muted);margin-top:14px;}
+.leaflet-popup-content{font-family:inherit; font-size:13px; max-width:260px;}
+.poi-dot{border-radius:50%; border:2px solid #fff; box-shadow:0 0 3px rgba(0,0,0,.4);}
+.anchor-pin{border-radius:50%; border:2px solid #fffdf9; box-shadow:0 2px 6px rgba(38,36,31,.4); color:#fdfbf6; font-weight:700; font-size:11px; display:flex; align-items:center; justify-content:center; font-family:var(--fnum);}
+.me-pulse{border-radius:50%; background:rgba(53,96,143,.25); border:2px solid #35608f;}
+@media (min-width:640px){ body{font-size:16px;} }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="eyebrow"><i></i>长江 · 诗词 · 自驾 16 天</div>
+    <h1>诗路长江</h1>
+    <div class="route">无锡 <b>→</b> 武汉 <b>→</b> 奉节 <b>→</b> 重庆 <b>→</b> 成都 <b>→</b> 宜昌 <b>→</b> 无锡</div>
+    <div class="dates">2026.7.25(周六)出发 · 8.9(周日)到家 · 亲子人文环线</div>
+    <div class="progress"><i id="progBar"></i></div>
+    <div class="progress-txt" id="progTxt">已完成 0 / 16 天</div>
+  </div>
+</header>
+
+<nav class="tabs">
+  <button id="tab1" class="on" onclick="showTab(1)">行程</button>
+  <button id="tab2" onclick="showTab(2)">文史</button>
+  <button id="tab3" onclick="showTab(3)">地图</button>
+  <button id="tab4" onclick="showTab(4)">智能助手</button>
+</nav>
+
+<div class="wrap">
+  <section id="sec1" class="on"></section>
+
+  <section id="sec2">
+    <div class="map-hint" style="margin:4px 2px 0">口袋文史导览:按路线顺序排列,车上随讲随查。"车览"=高速远观不停留;"备选"=顺路可加,看时间灵活取舍。</div>
+    <div id="culBox"></div>
+  </section>
+
+  <section id="sec3">
+    <div class="map-bar">
+      <button class="btn" onclick="locateMe()"><span>定位我</span><span class="b-ic">📍</span></button>
+      <button class="btn ghost" onclick="fitAll()"><span>全程总览</span><span class="b-ic">⤢</span></button>
+    </div>
+    <div class="map-shell"><div id="map"></div></div>
+    <div class="scard" id="legInfoWrap" style="display:none"><div class="sc-core" id="legInfo"></div></div>
+    <div class="map-hint" id="nearTxt">点地图任意位置可手动设置“我在哪”;点任意路段可查看该段距离和沿途站点。</div>
+    <div class="legend">
+      <span><i style="background:#2f6f5e"></i>去程/回程主线</span>
+      <span><i style="background:#2f6fb2"></i>A 九寨沟(蓝)</span>
+      <span><i style="background:#e07b24"></i>B 乐山峨眉(橙)</span>
+      <span><i style="background:#d13c3c"></i>C 四姑娘山(红)</span>
+      <span><i style="background:#4ca64c"></i>D 海螺沟(绿)</span>
+      <span>● 红=景点 · 黄=车览 · ➊ 宿营城市</span>
+    </div>
+    <div id="roadBox"><div class="skl" style="height:14px;width:70%;margin-bottom:6px"></div><div class="skl" style="height:14px;width:45%"></div></div>
+
+    <div class="scard"><div class="sc-core">
+      <h3>文史地雷达<span class="en">100km 自动发现 · 11岁版</span></h3>
+      <div class="radar-filters">
+        <button class="rf on" data-c="文" onclick="rfToggle(this)">文</button>
+        <button class="rf on" data-c="史" onclick="rfToggle(this)">史</button>
+        <button class="rf on" data-c="地" onclick="rfToggle(this)">地</button>
+        <button class="rf on" data-c="科" onclick="rfToggle(this)">科</button>
+        <button class="rf route on" data-c="route" onclick="rfToggle(this)">顺路</button>
+      </div>
+      <div class="radar-actions">
+        <button class="btn sm" onclick="aiScan(false)"><span>AI 深度扫描</span><span class="b-ic">✦</span></button>
+        <button class="btn sm ghost" onclick="runRadar()"><span>重扫本区</span></button>
+      </div>
+      <div class="dim" id="radarStatus">定位后,自动扫描周围 100 公里的文史地科点位…</div>
+      <div id="radarList"></div>
+      <div id="aiKeyBox" class="ai-key" style="display:none">
+        <div class="dim">首次使用 AI 扫描需粘贴 DeepSeek API Key(仅保存在本机浏览器,可在 DeepSeek 后台随时吊销):</div>
+        <input id="aiKeyIn" type="password" placeholder="sk-..." autocomplete="off">
+        <button class="btn sm" onclick="saveKey()"><span>保存并扫描</span></button>
+      </div>
+    </div></div>
+  </section>
+
+  <section id="sec4">
+    <div class="scard"><div class="sc-core"><h3>今日状态</h3><div id="todayBody" class="dim">读取中…</div></div></div>
+
+    <div class="scard"><div class="sc-core">
+      <h3>天气与方案决策<span class="en">Open-Meteo 实时预报</span></h3>
+      <div class="dim" style="margin-bottom:8px">每次打开自动联网更新 · <span id="wxTime"></span> · <a style="color:var(--teal);cursor:pointer;text-decoration:underline" onclick="loadWeather()">立即刷新</a></div>
+      <div id="wxBox"><div class="skl" style="height:16px;width:38%;margin-bottom:8px"></div><div class="skl" style="height:66px;margin-bottom:10px"></div><div class="skl" style="height:16px;width:30%;margin-bottom:8px"></div><div class="skl" style="height:66px"></div></div>
+      <div id="wxVerdict"></div>
+    </div></div>
+
+    <div class="scard"><div class="sc-core">
+      <h3>剩余行程最优重排<span class="en">基于当前位置/进度</span></h3>
+      <div class="dim" style="margin-bottom:10px">勾选“已完成”的天数后,这里会用剩余宿营点重新穷举最优顺序(终点固定无锡),并和原计划比里程。</div>
+      <button class="btn" onclick="runOptimize()"><span>重新计算</span><span class="b-ic">↻</span></button>
+      <div id="optBox" style="margin-top:12px" class="dim">尚未计算。</div>
+    </div></div>
+
+    <div class="scard"><div class="sc-core">
+      <h3>预约提醒</h3>
+      <div id="bookBox"></div>
+    </div></div>
+
+    <div class="foot">
+      数据:底图 © 高德地图;路线 © OSRM/OSM 真实道路计算(首次联网后本地缓存);天气 © Open-Meteo,每次打开实时拉取最新预报;坐标为 WGS-84 近似值,展示时已转 GCJ-02。<br>
+      智能页里程为直线×1.25 估算,仅用于方案比较;地图页里程为 OSRM 实际道路里程。iPhone 上浏览器定位需 https 环境,不可用时可点地图手动设置位置。
+    </div>
+  </section>
+</div>
+
+<div id="poiSheetBk" onclick="closePoi()"></div>
+<div id="poiSheet"><div class="ps-grip"></div><div class="ps-head"><b id="psTitle"></b><span id="psCat" class="ps-cat"></span><button class="ps-x" onclick="closePoi()">×</button></div><div id="psBody"></div></div>
+
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+/* ============ 基础工具 ============ */
+function load(k,def){try{var v=localStorage.getItem(k);return v?JSON.parse(v):def;}catch(e){return def;}}
+function save(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
+function fmtDate(d){var m=('0'+(d.getMonth()+1)).slice(-2),dd=('0'+d.getDate()).slice(-2);return d.getFullYear()+'-'+m+'-'+dd;}
+function hav(a,b){var R=6371,toR=Math.PI/180;var dLa=(b.lat-a.lat)*toR,dLo=(b.lng-a.lng)*toR;var s=Math.sin(dLa/2)*Math.sin(dLa/2)+Math.cos(a.lat*toR)*Math.cos(b.lat*toR)*Math.sin(dLo/2)*Math.sin(dLo/2);return R*2*Math.atan2(Math.sqrt(s),Math.sqrt(1-s));}
+/* WGS-84 ↔ GCJ-02(高德底图纠偏与反解) */
+var G_PI=3.14159265358979324,G_A=6378245.0,G_EE=0.00669342162296594323;
+function outChina(lat,lng){return lng<72.004||lng>137.8347||lat<0.8293||lat>55.8271;}
+function tLat(x,y){var r=-100+2*x+3*y+0.2*y*y+0.1*x*y+0.2*Math.sqrt(Math.abs(x));r+=(20*Math.sin(6*x*G_PI)+20*Math.sin(2*x*G_PI))*2/3;r+=(20*Math.sin(y*G_PI)+40*Math.sin(y/3*G_PI))*2/3;r+=(160*Math.sin(y/12*G_PI)+320*Math.sin(y*G_PI/30))*2/3;return r;}
+function tLng(x,y){var r=300+x+2*y+0.1*x*x+0.1*x*y+0.1*Math.sqrt(Math.abs(x));r+=(20*Math.sin(6*x*G_PI)+20*Math.sin(2*x*G_PI))*2/3;r+=(20*Math.sin(x*G_PI)+40*Math.sin(x/3*G_PI))*2/3;r+=(150*Math.sin(x/12*G_PI)+300*Math.sin(x/30*G_PI))*2/3;return r;}
+function wgs2gcj(lat,lng){if(outChina(lat,lng))return[lat,lng];var dLat=tLat(lng-105,lat-35),dLng=tLng(lng-105,lat-35);var radLat=lat/180*G_PI;var magic=Math.sin(radLat);magic=1-G_EE*magic*magic;var sq=Math.sqrt(magic);dLat=(dLat*180)/((G_A*(1-G_EE))/(magic*sq)*G_PI);dLng=(dLng*180)/(G_A/sq*Math.cos(radLat)*G_PI);return[lat+dLat,lng+dLng];}
+function gcj2wgs(lat,lng){if(outChina(lat,lng))return[lat,lng];var g=wgs2gcj(lat,lng);return[lat*2-g[0],lng*2-g[1]];}
+
+/* ============ 行程数据 ============ */
+var ANCHORS={
+ wx:{name:'无锡',lat:31.574,lng:120.301,stay:'家'},
+ wh:{name:'武汉',lat:30.593,lng:114.305,stay:'D1–2 宿'},
+ fj:{name:'奉节',lat:31.018,lng:109.464,stay:'D3 宿'},
+ cq:{name:'重庆',lat:29.563,lng:106.551,stay:'D4–5 宿'},
+ dz:{name:'大足',lat:29.770,lng:105.790,stay:'D6 途经'},
+ cd:{name:'成都',lat:30.660,lng:104.065,stay:'D6–13 宿'},
+ jzg:{name:'九寨沟口',lat:33.262,lng:103.918,stay:'方案A 宿3晚'},
+ ls:{name:'乐山',lat:29.552,lng:103.766,stay:'方案B D11'},
+ em:{name:'峨眉山',lat:29.520,lng:103.440,stay:'方案B 宿山脚2晚'},
+ sg:{name:'四姑娘山镇',lat:31.020,lng:102.830,stay:'方案C 宿3晚'},
+ ld:{name:'泸定',lat:29.914,lng:102.234,stay:'方案D 途经'},
+ hg:{name:'磨西镇',lat:29.655,lng:102.110,stay:'方案D 宿3晚'},
+ yc:{name:'宜昌',lat:30.692,lng:111.286,stay:'D14–15 宿'}
+};
+var POIS=[
+ {name:'大别山(G42穿行段)',lat:31.400,lng:115.700,day:'D1',seg:'out',pass:true,info:'皖鄂界山,G42穿行的路段:从长江下游平原进入大别山区,再进两湖平原,地貌一路渐变;1947年刘邓大军"千里跃进大别山",揭开战略反攻序幕。'},
+ {name:'东坡赤壁(黄州)',lat:30.442,lng:114.878,day:'备选D2/3',seg:'out',info:'苏轼贬居黄州四年,写下《念奴娇·赤壁怀古》与前、后《赤壁赋》——"大江东去,浪淘尽,千古风流人物"。此处称"文赤壁",三国古战场"武赤壁"在咸宁赤壁市。武汉以东约1.5小时,想加项可放D2下午或D3绕一点。'},
+ {name:'湖北省博物馆',lat:30.5629,lng:114.3578,day:'D2',seg:'out',info:'曾侯乙编钟(战国,65件,一钟双音,改写了世界音乐史)、越王勾践剑("卧薪尝胆",2500年不锈)两大镇馆之宝;还有云梦睡虎地秦简(秦代法律原文)、郧县人头骨化石。编钟演奏值得专门听一场。'},
+ {name:'黄鹤楼',lat:30.5456,lng:114.3020,day:'D2',seg:'out',info:'始建于三国孙权(223年),屡毁屡建,今楼为1985年重建。崔颢《黄鹤楼》(8上课文)"昔人已乘黄鹤去";李白叹"眼前有景道不得,崔颢题诗在上头",又作《送孟浩然之广陵》《与史郎中钦听黄鹤楼上吹笛》——"江城五月落梅花",武汉别称"江城"由此而来。园内还有毛泽东词碑亭(《菩萨蛮·黄鹤楼》"烟雨莽苍苍,龟蛇锁大江")。'},
+ {name:'晴川阁',lat:30.5543,lng:114.2887,day:'D2',seg:'out',info:'与黄鹤楼隔江相望,因崔颢诗"晴川历历汉阳树,芳草萋萋鹦鹉洲"得名;景区内禹稷行宫祭祀大禹——武汉一带自古传说是大禹治水导汉水入江之处。'},
+ {name:'荆州古城',lat:30.354,lng:112.190,day:'D3',seg:'out',pass:true,info:'三国重镇:"刘备借荆州""关羽大意失荆州"的发生地,现存城墙为明清重修,是中国保存最完整的府城城墙之一;高速从城北经过,可远观城墙轮廓。'},
+ {name:'昭君故里(兴山)',lat:31.208,lng:110.743,day:'D3',seg:'out',pass:true,info:'王昭君故乡。西汉元帝时昭君出塞和亲匈奴,换来边塞数十年安宁;杜甫《咏怀古迹》"一去紫台连朔漠,独留青冢向黄昏"。G42兴山出口,时间紧可远观。'},
+ {name:'巫山·巫峡',lat:31.074,lng:109.879,day:'D3',seg:'out',pass:true,info:'长江三峡第二峡,以"巫山十二峰"云雾闻名,神女峰为其中之最;宋玉《高唐赋》巫山云雨、元稹"除却巫山不是云"、毛泽东"截断巫山云雨,高峡出平湖"皆指此。G42沿江穿山而过。'},
+ {name:'白帝城·瞿塘峡',lat:31.0426,lng:109.5344,day:'D4',seg:'out',info:'西汉末年公孙述筑城,见井中白气如龙而自称"白帝";三国刘备在此托孤诸葛亮(223年);李白《早发白帝城》(小学课文)写于流放夜郎途中遇赦;刘禹锡任夔州刺史时采巴渝民歌作《竹枝词》——"东边日出西边雨,道是无晴却有晴"(小学课文)。城下夔门=10元人民币背面,瞿塘峡为三峡最短最险(8公里)。'},
+ {name:'云阳张飞庙',lat:30.930,lng:108.860,day:'D4/D14',seg:'out',pass:true,info:'三国古迹:张飞遇害后"头葬云阳、身葬阆中",庙始建于蜀汉末年;因三峡蓄水原址淹没,2003年一砖一瓦编号搬迁至32公里外对岸——"移民"的不止人,还有庙。G42从附近经过。'},
+ {name:'白公馆·渣滓洞',lat:29.5886,lng:106.4310,day:'D5',seg:'out',info:'小说《红岩》的真实发生地;"小萝卜头"宋振中8个月入狱、8岁牺牲,是新中国最小的烈士;江姐(江竹筠)等200余人于1949年"11·27"就义,狱中还发生过"绣红旗"的故事。建议家长先给孩子讲讲背景,这是沉重但重要的一课。'},
+ {name:'重庆中国三峡博物馆',lat:29.5618,lng:106.5537,day:'D5',seg:'out',info:'镇馆之宝乌杨阙(汉代石阙,全国保存最完整的汉阙)、"巫山人"下颌骨化石(约200万年前,中国境内最早的人类化石之一);三峡淹没区抢救文物、巴人历史与抗战陪都岁月;对面即人民大礼堂。免费,需预约。'},
+ {name:'湖广会馆',lat:29.567,lng:106.586,day:'D5备选',seg:'out',info:'清初"湖广填四川"大移民的实物见证:明末战乱后四川人口锐减,朝廷组织湖广等省移民入川,持续百余年——今天很多川渝人的族谱第一页就写着这次迁徙。黄墙建筑群依山坡而建,与东水门大桥同框。'},
+ {name:'解放碑(抗战胜利纪功碑)',lat:29.557,lng:106.578,day:'D5晚',seg:'out',info:'本名"抗战胜利纪功碑"(1947年建成),是中国唯一纪念抗日战争胜利的纪念碑,重庆的城市原点;如今被繁华商圈环绕,晚上顺路看即可,不必专程。'},
+ {name:'大足石刻(宝顶山)',lat:29.7680,lng:105.7940,day:'D6',seg:'out',info:'世界文化遗产,南宋赵智凤历时70余年主持开凿,把佛经变成一幅幅石头连环画:千手观音实有1007只手;31米半身卧佛表现释迦涅槃;《父母恩重经变相》用十组雕像讲"孝顺";养鸡女、吹笛女充满宋代市井气息。与敦煌、云冈、龙门并称四大石窟。'},
+ {name:'杜甫草堂',lat:30.6598,lng:104.0280,day:'D7',seg:'cd',info:'759年杜甫避安史之乱入蜀,在浣花溪畔盖起草堂,住近4年、写诗240多首:《茅屋为秋风所破歌》"安得广厦千万间"(8下)、《春夜喜雨》"好雨知时节"、《绝句》"两个黄鹂鸣翠柳"、《江畔独步寻花》"黄四娘家花满蹊"(均为小学课文)都写于此。'},
+ {name:'成都博物馆',lat:30.6595,lng:104.0647,day:'D7',seg:'cd',info:'成都通史陈列,从宝墩古城到天府广场,读懂"天府之国"三千年;镇馆有战国船棺、汉代说唱俑(历史课本里的"击鼓说唱俑")。天府广场旁,免费需预约;人民公园鹤鸣茶社(百年)与保路运动纪念碑也在附近——1911年保路运动正是辛亥革命的导火索。'},
+ {name:'望江楼公园',lat:30.627,lng:104.085,day:'D7备选',seg:'cd',info:'唐代女诗人薛涛的纪念地:她一生写诗500多首,创制的"薛涛笺"风行诗坛,元稹、白居易都和她唱和过;园内遍植竹子150多种,崇丽阁是成都老地标。D7下午的另一个清净选择。'},
+ {name:'武侯祠',lat:30.6420,lng:104.0475,day:'D8',seg:'cd',info:'全国唯一君臣合祀祠庙(刘备+诸葛亮),刘备惠陵在旁。杜甫《蜀相》"丞相祠堂何处寻,锦官城外柏森森"写的正是这里;9年级课文《出师表》"鞠躬尽瘁,死而后已";镇馆"三绝碑"由唐代名相裴度撰文、名家柳公绰书丹;从奉节白帝托孤到这里,三国故事完成闭环。'},
+ {name:'金沙遗址',lat:30.6827,lng:104.0137,day:'D8',seg:'cd',info:'约3000年前古蜀国都邑:太阳神鸟金饰仅0.02厘米厚,四鸟绕日而飞,被选为中国文化遗产标志;黄金面具与三星堆风格一脉相承;数以吨计的象牙说明古蜀早已有远方贸易。遗迹馆就建在考古发掘现场之上。'},
+ {name:'都江堰',lat:30.9985,lng:103.6186,day:'D9',seg:'cd',info:'战国秦国李冰父子主持修建(约前256年),世界最古老且至今仍在使用的无坝引水工程。三大件:鱼嘴"四六分水"、飞沙堰"二八排沙"、宝瓶口控制进水;二王庙墙上刻着六字诀"深淘滩、低作堰",庙前埋着标志淘滩深度的"卧铁"。成都平原由此成天府之国(7上历史)。'},
+ {name:'青城山',lat:30.9010,lng:103.5690,day:'D9',seg:'cd',info:'中国道教发源地之一,东汉张陵在此创立五斗米道,天师洞尚存千年银杏;"青城天下幽";《白蛇传》里白素贞"青城山下"修炼之地;86版《西游记》"偷吃人参果"的五庄观就在天师洞、上清宫一带取景。'},
+ {name:'九寨沟',lat:33.2590,lng:103.9180,day:'方案A',seg:'flex',info:'因沟内九个藏族村寨得名,世界自然遗产;湖水颜色来自钙华沉积与光线折射,五花海一湖五色;诺日朗瀑布是86版《西游记》片尾取景地;2017年地震后历时4年修复全域重开,本身就是一堂自然与坚韧的课。'},
+ {name:'李白故里(江油青莲镇)',lat:31.696,lng:104.692,day:'方案A备选',seg:'flex',info:'李白5–25岁生活的地方,"诗仙"的童年和少年都在蜀中渡过;他在江油写下最早的试笔诗,出川时作《峨眉山月歌》"思君不见下渝州"。九绵高速青莲出口即达,方案A去程最顺的加项(约1小时)。'},
+ {name:'平武报恩寺',lat:32.410,lng:104.528,day:'方案A备选',seg:'flex',info:'明代土司历时20年修建的楠木宫殿群,布局仿北京故宫,人称"深山故宫";全寺斗拱榫卯,华严殿内转轮经藏千年仍可转动。九绵高速平武出口约10分钟,顺路程度满分。'},
+ {name:'三星堆',lat:30.9930,lng:104.2020,day:'方案B',seg:'flex',info:'"沉睡三千年,一醒惊天下":青铜大立人高2.62米,青铜神树近4米(有人说是《山海经》里的扶桑树),纵目面具眼球突出16厘米,黄金面具薄如蝉翼。李白《蜀道难》"蚕丛及鱼凫,开国何茫然"说的就是这个古蜀国。新馆2023年开放。'},
+ {name:'三苏祠(眉山)',lat:30.039,lng:103.832,day:'方案B备选',seg:'flex',info:'苏洵、苏轼、苏辙"一门三父子"的故居,唐宋八大家这一家占了三席;苏轼一生写不尽的《水调歌头》《念奴娇》《定风波》,根在这座小城园林里。方案B D11去乐山正好顺路,强烈建议加停1–2小时。'},
+ {name:'乐山大佛',lat:29.5452,lng:103.7692,day:'方案B',seg:'flex',info:'唐代海通和尚为镇三江汇流的水患发起开凿(713年),历时90年、三代人才完成,71米世界第一大石刻坐佛,"山是一尊佛,佛是一座山";为保护善款,海通曾自挖双目明志。建议坐船观全景,免去排队下栈道。'},
+ {name:'峨眉山(报国寺)',lat:29.520,lng:103.440,day:'方案B',seg:'flex',info:'李白《峨眉山月歌》(7上课文)"峨眉山月半轮秋,影入平羌江水流"——这是他25岁出蜀远游时的思乡之作;普贤菩萨道场,四大佛教名山之一;万年寺有北宋普贤骑六牙白象铜像(62吨);中山区清音阁、生态猴区(藏酋猴)适合孩子。'},
+ {name:'四姑娘山(双桥沟)',lat:31.020,lng:102.830,day:'方案C',seg:'flex',info:'"蜀山之后"幺妹峰6250米,邛崃山脉最高峰,四座雪峰一字排开;双桥沟是最轻松的一条沟:观光车直达沟尾红杉林,再逐站下行,雪山、草甸、漂流一次看全;途中"中国熊猫大道"穿卧龙大熊猫栖息地。注意:镇上海拔约3200米、沟尾约3800米,孩子有高反风险,不适要立即下撤。'},
+ {name:'海螺沟(冰川森林公园)',lat:29.630,lng:102.090,day:'方案D',seg:'flex',info:'贡嘎山东坡,全球同纬度海拔最低的现代海洋性冰川:冰舌一路降到2850米的原始森林里;大冰瀑布高1080米、宽1100米,是中国最大冰瀑布;索道直达四号营地(约3600米)看冰川全景和贡嘎主峰,二号营地有92℃雪山温泉。2022年泸定地震后重建,现已全面恢复(门票90+观光车70+索道135,需预约)。磨西镇海拔仅1600米,孩子无高反之忧。'},
+ {name:'磨西古镇',lat:29.648,lng:102.118,day:'方案D',seg:'flex',info:'川藏茶马古道重镇;1935年红军长征"磨西会议"在此召开,毛泽东住过的天主教堂仍在,现为红军长征陈列馆;镇上海拔1600米,夏季15–22℃,避暑正好,民宿餐饮都方便。'},
+ {name:'泸定桥',lat:29.914,lng:102.234,day:'方案D',seg:'flex',info:'小学课文《飞夺泸定桥》的发生地:1935年5月29日,红军22勇士攀着13根铁索夺下大渡河上这座清代铁索桥;门票10元,可以真的走上晃悠悠的铁索桥——书本瞬间变立体。磨西↔泸定约50公里。'},
+ {name:'葛洲坝',lat:30.735,lng:111.282,day:'D15',seg:'back',pass:true,info:'长江上第一座大型水利枢纽(1988年建成),为三峡工程积累了全套经验,人称三峡工程的"实战预演";从宜昌市区过西陵长江大桥时就能看到。'},
+ {name:'三游洞',lat:30.793,lng:111.288,day:'D15备选',seg:'back',info:'西陵峡口名洞:唐代白居易、白行简、元稹三人同游题诗,称"前三游";宋代苏洵、苏轼、苏辙父子再来,称"后三游"——一个山洞装下唐诗宋词两朝文豪。宜昌城郊,D15时间充裕可加。'},
+ {name:'三峡大坝(坛子岭)',lat:30.8233,lng:111.0520,day:'D15',seg:'back',info:'世界最大水利枢纽:坝长2309.5米、坝顶高程185米、装机2250万千瓦;双线五级船闸"大船爬楼梯"(过闸约3小时),升船机"小船坐电梯"(提升113米)。毛泽东《水调歌头·游泳》"高峡出平湖"在此成真;百万移民"舍小家为大家";7–8月汛期或见泄洪。'},
+ {name:'屈原故里(秭归)',lat:30.8260,lng:110.9790,day:'D15',seg:'back',info:'屈原故乡,《离骚》"路漫漫其修远兮,吾将上下而求索";公元前278年屈原投汨罗江,百姓划船投粽,遂有端午;《橘颂》"后皇嘉树,橘徕服兮"——秭归至今盛产脐橙。屈原祠在凤凰山上与三峡大坝正面相对:古人祠堂望着现代大坝,全程最奇妙的画面。'},
+ {name:'麻城(鄂豫皖交界)',lat:31.180,lng:114.970,day:'D16',seg:'back',pass:true,info:'"湖广填四川"的重要移民出发地之一,很多川渝族谱第一页写着"麻城孝感乡";也是著名的杜鹃花城(四月杜鹃满山的龟峰山)。回程途经,不停留。'},
+ {name:'合肥',lat:31.861,lng:117.283,day:'D16',seg:'back',pass:true,info:'北宋名臣包拯的故乡,"包青天"的故事从这里开始;若D16加住一晚,包公园、逍遥津(三国张辽威震逍遥津)都在市区。'},
+ {name:'南京',lat:32.061,lng:118.797,day:'D16',seg:'back',pass:true,info:'六朝古都(东吴、东晋、宋齐梁陈),明初首都;"江南佳丽地,金陵帝王州";若加住一晚,明孝陵、中山陵、中华门城墙任选,无锡到家只剩1.5小时。'}
+];
+/* 文史地雷达:40个主点的[类别,想一想] */
+var CAT_Q={
+ '大别山(G42穿行段)':['地','从平原到山区,地貌为什么会突然改变?'],
+ '东坡赤壁(黄州)':['文','苏轼被贬黄州,为什么反而写出最好的作品?'],
+ '湖北省博物馆':['史','一套2400年前的编钟,为什么能改写世界音乐史?'],
+ '黄鹤楼':['文','一座楼被毁掉重建二十多次,人们为什么还要一直建它?'],
+ '晴川阁':['文','诗里的"晴川""鹦鹉洲",和眼前的实景对得上吗?'],
+ '荆州古城':['史','关羽为什么会"大意失荆州"?'],
+ '昭君故里(兴山)':['史','一个宫女远嫁塞外,为什么被记了两千年?'],
+ '巫山·巫峡':['地','巫山的云为什么特别多、特别好看?'],
+ '白帝城·瞿塘峡':['文','李白写"轻舟已过万重山"时,心情为什么从愁变轻?'],
+ '云阳张飞庙':['史','一座庙为什么要"一砖一瓦编号搬家"?'],
+ '白公馆·渣滓洞':['史','小萝卜头在监狱里,最渴望的是什么?'],
+ '重庆中国三峡博物馆':['史','为什么要赶在江水上涨前"抢救"文物?'],
+ '湖广会馆':['史','你的四川同学,祖先可能是从哪里迁来的?'],
+ '解放碑(抗战胜利纪功碑)':['史','一座碑为什么能从"纪功碑"变成整座城市的名字?'],
+ '大足石刻(宝顶山)':['史','古人为什么要把佛经刻成一幅幅连环画?'],
+ '杜甫草堂':['文','自己茅屋漏雨,杜甫为什么先想到"天下寒士"?'],
+ '成都博物馆':['史','成都为什么三千年没搬过家、没改过名?'],
+ '望江楼公园':['文','唐代的"薛涛笺",相当于今天的什么东西?'],
+ '武侯祠':['史','皇帝和丞相,为什么能合祀在同一座祠里?'],
+ '金沙遗址':['史','古蜀国没有留下文字,我们怎么知道它的故事?'],
+ '都江堰':['科','不用大坝,李冰用什么办法让江水自己分洪排沙?'],
+ '青城山':['地','道教为什么选青城山做发源地?'],
+ '九寨沟':['地','湖水为什么是蓝绿色的?'],
+ '李白故里(江油青莲镇)':['文','李白离开家乡后,为什么总爱写"月亮"?'],
+ '平武报恩寺':['史','深山里为什么会藏着一座"小故宫"?'],
+ '三星堆':['史','三星堆人为什么要把面具的眼睛做得那么突出?'],
+ '三苏祠(眉山)':['文','一家出三个大文豪,靠的是什么?'],
+ '乐山大佛':['史','古人为什么愿意花90年,在江边凿一尊大佛?'],
+ '峨眉山(报国寺)':['文','李白出蜀远游时,为什么把思念寄给"峨眉山月"?'],
+ '四姑娘山(双桥沟)':['地','为什么越往高处走,呼吸越费劲?'],
+ '海螺沟(冰川森林公园)':['地','冰川怎么能"流"到绿色的森林里?'],
+ '磨西古镇':['史','红军长征途中,为什么要在这里开一次会?'],
+ '泸定桥':['史','22位勇士攀铁索夺桥,难在哪里?'],
+ '葛洲坝':['科','为什么说葛洲坝是三峡大坝的"实战预演"?'],
+ '三游洞':['文','一个山洞,为什么能装下唐诗宋词两朝文豪?'],
+ '三峡大坝(坛子岭)':['科','船是怎么"爬楼梯"翻越大坝的?'],
+ '屈原故里(秭归)':['文','端午节为什么要吃粽子、赛龙舟?'],
+ '麻城(鄂豫皖交界)':['史','为什么很多川渝人的族谱第一页写着"麻城孝感乡"?'],
+ '合肥':['史','"包青天"断案,靠的真是三口铡刀吗?'],
+ '南京':['史','为什么南京叫"六朝古都"?']
+};
+/* 文史地雷达:60个走廊补充点(11岁版) */
+var RADAR_EXTRA=[
+ {n:'南京博物院',c:'史',lat:32.052,lng:118.815,info:'中国三大博物馆之一,镇馆有金缕玉衣、竹林七贤砖画;若回程在南京加住,值得专门去半天。',q:'玉片用金线缝成衣服,古人觉得这样能做什么?'},
+ {n:'中华门瓮城(南京)',c:'史',lat:32.013,lng:118.778,info:'世界最大的古城门,明代朱元璋修建,三道瓮城四道门,藏兵洞里能埋伏三千士兵。',q:'敌人冲进第一道门后,会发生什么?'},
+ {n:'秦淮河·乌衣巷(南京)',c:'文',lat:32.022,lng:118.792,info:'刘禹锡《乌衣巷》"旧时王谢堂前燕,飞入寻常百姓家"写的就是这条小巷,旁边是十里秦淮。',q:'燕子还是那些燕子,为什么诗人觉得什么都变了?'},
+ {n:'惠山古镇·天下第二泉(无锡)',c:'文',lat:31.590,lng:120.270,info:'家门口的宝藏:陆羽评的"天下第二泉"就在这里,瞎子阿炳在泉边拉出《二泉映月》。',q:'一首没有歌词的曲子,为什么能让人听出眼泪?'},
+ {n:'东林书院(无锡)',c:'文',lat:31.580,lng:120.300,info:'明代最有名的书院,那副名联就挂在这:"风声雨声读书声声声入耳,家事国事天下事事事关心"。',q:'这副对联为什么能成为读书人的座右铭?'},
+ {n:'包公园(合肥)',c:'史',lat:31.863,lng:117.290,info:'为包拯而建的公园,这位"包青天"是真实存在的历史清官,不只是戏文里的人物。',q:'为什么九百多年了,人们还在讲包拯?'},
+ {n:'逍遥津公园(合肥)',c:'史',lat:31.870,lng:117.288,info:'三国古战场:张辽只带八百人,在这里冲进孙权十万大军,从此"张辽止啼"——小孩听到他名字都不敢哭。',q:'八百人凭什么敢冲进十万人?'},
+ {n:'安徽省博物院(合肥)',c:'史',lat:31.787,lng:117.354,info:'看徽派建筑"四水归堂"和楚大鼎;楚文化的半壁江山,和湖北的楚文物正好对照。',q:'一座房子的屋顶,为什么要让雨水全流进自家院子?'},
+ {n:'三河古镇(合肥)',c:'史',lat:31.520,lng:117.230,info:'两千五百年的水乡古镇,太平天国在这里打过著名的大胜仗;杨振宁小时候也住过这一带。',q:'水乡的街道,为什么都沿河修成"一"字或"丁"字?'},
+ {n:'巢湖·姥山岛',c:'地',lat:31.620,lng:117.560,info:'中国五大淡水湖之一,湖心岛上的文峰塔是明代建的;G42从湖南岸经过,天晴能看到大湖。',q:'淡水湖和海,水有什么不一样?'},
+ {n:'天堂寨(大别山)',c:'地',lat:31.100,lng:115.750,info:'大别山第二高峰,一脚跨安徽湖北两省;山顶瀑布群夏天凉快得像开了空调。',q:'站在两省分界线上,雨水分开后会流进哪两条河?'},
+ {n:'梅山水库(金寨)',c:'科',lat:31.660,lng:115.930,info:'新中国自己设计的第一座连拱坝(1956年),拦腰截住史河,至今还在发电防洪。',q:'水坝的形状为什么要弯成一道道拱?'},
+ {n:'金寨红军广场',c:'史',lat:31.720,lng:115.930,info:'金寨县走出了59位开国将军,被称为"将军县";广场上能找到一个县对中国革命的答案。',q:'一个山区小县,为什么能走出这么多将军?'},
+ {n:'盘龙城遗址(武汉)',c:'史',lat:30.720,lng:114.270,info:'3500年前的商代古城,武汉的"城市之根"——原来这里在甲骨文时代就有人建城了。',q:'没有水泥的古人,用什么筑城墙?'},
+ {n:'辛亥革命博物院(红楼,武汉)',c:'史',lat:30.554,lng:114.311,info:'1911年武昌起义后成立的军政府旧址,课本里的"辛亥革命"就从这栋楼开始;离黄鹤楼步行几分钟。',q:'为什么说武昌起义一声枪响,改变了中国两千年?'},
+ {n:'东湖(武汉)',c:'地',lat:30.560,lng:114.370,info:'中国最大的城中湖,比杭州西湖大六倍;毛泽东一生最爱来的湖,住了四十多次。',q:'城市里留一片大湖,除了好看还有什么用?'},
+ {n:'湖北省科技馆(武汉)',c:'科',lat:30.510,lng:114.410,info:'超大免费科技馆,航天、机器人、生态展项都能动手玩;如果省博出来还有体力,这里适合放电。',q:'亲手转一次齿轮,是不是比看书更快懂杠杆?'},
+ {n:'曹禺纪念馆(潜江)',c:'文',lat:30.400,lng:112.900,info:'《雷雨》作者曹禺的故乡,中国话剧之父;G50汉宜高速正好经过潜江。',q:'一部话剧演了九十年还不过时,靠的是什么?'},
+ {n:'荆州博物馆',c:'史',lat:30.352,lng:112.185,info:'地市级博物馆里的"隐藏王者":西汉男尸、楚汉漆器、越王州勾剑;楚国文物多到看不过来。',q:'为什么古剑埋了两千年,出土时还闪着光?'},
+ {n:'楚王车马阵(荆州)',c:'史',lat:30.410,lng:112.140,info:'"北有兵马俑,南有车马阵":楚王陪葬的真车真马坑,四十多个坑排在原野上。',q:'用真车真马陪葬,说明古人相信什么?'},
+ {n:'关陵(当阳)',c:'史',lat:30.820,lng:111.790,info:'关羽身躯的安葬地(头在洛阳,身在当阳);和云阳张飞庙一样,三国迷的朝圣地。',q:'一位战败的将军,为什么被尊成"武圣"?'},
+ {n:'长坂坡遗址公园(当阳)',c:'史',lat:30.830,lng:111.780,info:'赵云单骑救阿斗的古战场,《三国演义》里最燃的一段就发生在这;县城里有子龙塑像。',q:'历史上真实的赵云,和演义里有什么不同?'},
+ {n:'随州博物馆',c:'史',lat:31.690,lng:113.380,info:'曾侯乙编钟的出土地!老家在随州擂鼓墩,这里能看到更多曾国青铜器,读懂编钟的身世。',q:'编钟为什么一口钟能敲出两个音?'},
+ {n:'明显陵(钟祥)',c:'史',lat:31.170,lng:112.660,info:'世界文化遗产,嘉靖皇帝为父母修的陵,独一无二的"一陵两冢"格局,神道石像生很壮观。',q:'皇帝给爹妈修陵,为什么修出了"两个宝顶"?'},
+ {n:'清江画廊(长阳)',c:'地',lat:30.470,lng:111.200,info:'"八百里清江美如画",土家族的母河;水比长江清得多,山影像水墨画。',q:'同一片天空下,为什么这条江比长江清?'},
+ {n:'三峡工程博物馆(宜昌坝区)',c:'科',lat:30.823,lng:111.055,info:'就在大坝旁边,系统讲三峡工程怎么论证、怎么建、移民去了哪;看大坝前先来这补课最合适。',q:'建一座大坝,为什么要先开几十年的论证会?'},
+ {n:'黄陵庙(宜昌三斗坪)',c:'史',lat:30.830,lng:111.050,info:'纪念大禹治水的千年古庙,三峡地区最老的建筑之一;庙里还留着古人观测洪水的水文碑刻。',q:'大禹治水的办法,和李冰治水的办法像不像?'},
+ {n:'三峡人家(宜昌)',c:'地',lat:30.770,lng:111.150,info:'西陵峡畔的山水村寨,能看到老三峡的吊脚楼、乌篷船和峡江号子——蓄水后少有的"三峡原貌"。',q:'峡江号子这种歌,为什么在险滩边才会唱?'},
+ {n:'石宝寨(忠县)',c:'史',lat:30.420,lng:108.170,info:'长江"盆景":十二层木楼紧贴悬崖,不用一根铁钉;三峡蓄水后成了江中明珠,靠围堰保护。',q:'十二层木楼不用钉子,怎么两百年不倒?'},
+ {n:'万州大瀑布',c:'地',lat:30.830,lng:108.420,info:'宽151米的亚洲第一宽瀑布,比黄果树还宽;G42从万州经过,绕一点就能看。',q:'瀑布天天冲,石头为什么没被冲走?'},
+ {n:'天生城(万州)',c:'史',lat:30.850,lng:108.400,info:'南宋抗元的山城要塞,万州人守了几十年;山顶城墙遗址还能看出当年的防线。',q:'把城建在山顶,打仗时有什么好处和坏处?'},
+ {n:'云阳龙缸',c:'地',lat:30.780,lng:108.800,info:'深335米的"天下第一缸",悬崖外挑26米的玻璃廊桥,腿软指数五颗星;夏天山顶很凉快。',q:'一个"大水缸"形状的天坑,是怎么被水"溶"出来的?'},
+ {n:'白鹤梁水下博物馆(涪陵)',c:'科',lat:29.713,lng:107.394,info:'长江水下40米的博物馆!唐代起古人在江中石梁刻鱼记录枯水位,是世界最早的水文站;坐91米扶梯直达江底。',q:'没有仪表的古人,用什么记录长江一千多年的水位?'},
+ {n:'816工程(涪陵)',c:'科',lat:29.550,lng:107.490,info:'世界最大人工洞体:六万人秘密挖了17年的地下核工厂,空山洞能装下十几栋楼;科幻片现场感。',q:'为什么要在大山肚子里,藏一座看不见的工厂?'},
+ {n:'钓鱼城(合川)',c:'史',lat:30.000,lng:106.310,info:'南宋小城硬抗蒙古大军36年,大汗蒙哥都折在这里,被称为"上帝折鞭处"——小小山城改写了世界史。',q:'一座小城,凭什么挡住横扫欧亚的蒙古骑兵?'},
+ {n:'重庆自然博物馆(北碚)',c:'科',lat:29.810,lng:106.420,info:'恐龙化石、三峡古生物,规模很大的免费自然博物馆;恐龙厅是小朋友的必打卡。',q:'重庆这片地方,亿万年前是什么模样?'},
+ {n:'安岳石刻',c:'史',lat:30.100,lng:105.340,info:'比大足更早更野的石刻群:卧佛院的唐代大卧佛、毗卢洞的紫竹观音(翘脚观音),就在大足隔壁。',q:'观音为什么在这里翘着腿坐,而不是端端正正?'},
+ {n:'建川博物馆(大邑安仁)',c:'史',lat:30.500,lng:103.610,info:'中国最大的民间博物馆群,抗战、地震、民俗几十个馆;还有大名鼎鼎的"猪坚强"标本。',q:'一头猪,为什么会被做成标本纪念?'},
+ {n:'安仁古镇(大邑)',c:'史',lat:30.510,lng:103.620,info:'民国公馆老街,刘文彩庄园就在这里;和建川博物馆挨着,可以一起看。',q:'老房子怎么判断是穷人住的还是富人住的?'},
+ {n:'西岭雪山(大邑)',c:'文',lat:30.660,lng:103.180,info:'杜甫"窗含西岭千秋雪,门泊东吴万里船"写的就是它——成都晴天抬头就能看到的雪山。',q:'杜甫在成都家里,怎么看得见一百多公里外的雪山?'},
+ {n:'蒙顶山(雅安)',c:'文',lat:30.060,lng:103.030,info:'世界茶文化发源地,两千多年前这里种了人类最早的茶树;"扬子江中水,蒙山顶上茶"。',q:'一片树叶,为什么能改变全世界的生活习惯?'},
+ {n:'碧峰峡(雅安)',c:'地',lat:30.060,lng:103.000,info:'峡谷+大熊猫基地,熊猫多游客少;雅安"三绝":雅雨、雅鱼、雅女。',q:'雅安为什么一年有两百多天在下雨?'},
+ {n:'卧龙中华大熊猫苑',c:'科',lat:31.030,lng:103.180,info:'四姑娘山路上的熊猫福利:比市区基地人少得多,能安静看滚滚吃竹子;就在"中国熊猫大道"旁。',q:'大熊猫明明是熊,为什么整天吃素?'},
+ {n:'映秀震中遗址(汶川)',c:'史',lat:31.050,lng:103.490,info:'2008年5·12地震的震中,漩口中学遗址被保留下来;沉重,但会让孩子懂得生命和守望相助。',q:'地震来了,教室里的正确动作是什么?'},
+ {n:'桃坪羌寨(理县)',c:'史',lat:31.550,lng:103.170,info:'两千年的"东方古堡":碉楼相连、地下水网入户,巷子里像迷宫;羌族人的建筑智慧。',q:'没有自来水管的年代,水怎么流进每家每户?'},
+ {n:'松坪沟(茂县)',c:'地',lat:31.850,lng:103.630,info:'人称"小九寨"的高山海子群,秋天彩林倒映;去九寨沟的路上可以考虑顺道。',q:'高原湖泊的水,为什么清得能当镜子?'},
+ {n:'叠溪海子(茂县)',c:'地',lat:32.030,lng:103.680,info:'1933年大地震一夜形成的高原堰塞湖——整座叠溪古城就沉在这湖水下面。',q:'一场地震,怎么就把一座城变成了湖?'},
+ {n:'松潘古城',c:'史',lat:32.660,lng:103.600,info:'唐代松州城,文成公主进藏和亲路过的地方,也是红军长征翻雪山过草地的门户;城墙还能登。',q:'一座高原小城,为什么成了唐朝和吐蕃都想要的地方?'},
+ {n:'川主寺红军长征纪念碑',c:'史',lat:32.750,lng:103.620,info:'纪念红军过雪山草地的"中华第一金碑";碑文和群雕讲的就是课本里《金色的鱼钩》那段历史。',q:'过草地时,红军遇到的最大敌人是什么?'},
+ {n:'黄龙',c:'地',lat:32.750,lng:103.850,info:'三千多个钙华彩池像梯田一样铺满山谷,世界自然遗产;海拔3500米+,孩子状态好才考虑。',q:'钙华池一层一层的"台阶",是大自然怎么砌出来的?'},
+ {n:'王朗自然保护区(平武)',c:'科',lat:32.900,lng:104.050,info:'中国最早的大熊猫保护区之一,白马藏族的家园;九绵高速王朗出口直达,森林徒步看野生踪迹。',q:'科学家不看见熊猫,怎么知道林子里有几只?'},
+ {n:'李白纪念馆(江油)',c:'文',lat:31.780,lng:104.750,info:'李白故乡的纪念馆,能看到他25岁出蜀前的足迹;"床前明月光"也许就写在附近陇西院。',q:'李白这么爱旅游,他的路费从哪里来?'},
+ {n:'窦圌山(江油)',c:'地',lat:31.780,lng:104.680,info:'李白少年时游过的奇山,三座孤峰笔直如削,山顶古庙靠"铁索飞渡"连接。',q:'山峰顶上的人,靠什么在悬崖之间来往?'},
+ {n:'北川地震遗址',c:'史',lat:31.830,lng:104.470,info:'5·12地震中被整体保护下来的县城遗址,现在是国家级纪念地;看完会更敬畏自然、珍惜日常。',q:'为什么要保留一片废墟,而不是全部重建?'},
+ {n:'夹江千佛岩(乐山)',c:'史',lat:29.740,lng:103.570,info:'青衣江边的隋唐石窟,两千多尊小佛挤在崖壁上,比乐山大佛还早;游客很少。',q:'江边崖壁上凿佛,除了信仰还有什么作用?'},
+ {n:'麻浩崖墓(乐山)',c:'史',lat:29.540,lng:103.770,info:'汉代人在山崖里凿出的"地下房间",石棺、画像石都在;就在大佛景区旁边,顺路看。',q:'汉代人为什么要把墓修得像生前的家?'},
+ {n:'嘉阳小火车(犍为)',c:'科',lat:29.170,lng:103.950,info:'工业革命活化石:还在跑的窄轨蒸汽小火车,哐当哐当穿过油菜花山谷(春天最美)。',q:'蒸汽机车头,是靠什么把轮子推起来的?'},
+ {n:'罗城古镇(犍为)',c:'史',lat:29.210,lng:104.000,info:'整条街修成一只大船的形状,被称为"山顶一只船";明代移民们抱团取暖的杰作。',q:'人们为什么要把一条街造成船的样子?'},
+ {n:'安顺场(石棉)',c:'史',lat:29.230,lng:102.380,info:'大渡河边:石达开全军覆没的地方,72年后红军却在这里强渡成功——同一条河,两种结局。',q:'面对同一条大河,为什么太平军过不去、红军过去了?'},
+ {n:'康定(情歌城)',c:'文',lat:30.050,lng:101.960,info:'"跑马溜溜的山上,一朵溜溜的云"——《康定情歌》唱的就是这座城;海螺沟往西约76公里。',q:'一首民歌,怎么会让全世界知道一座小城?'}
+];
+var DAYS=[
+ {n:1,date:'7.25',full:'2026-07-25',wd:'周六',title:'无锡 → 武汉',meta:'700km/8h · 宿武昌',type:'drive',anchor:'wh',
+  plan:['早7:00出发,G42沪蓉高速经合肥、六安、金寨,过大别山进两湖平原','傍晚到武汉,宿黄鹤楼/粮道街附近'],
+  know:['线路≈李白“千里江陵一日还”的反方向——逆流而上,去找诗里的地方','伏笔:15天后会在一座大坝上,亲眼看到毛主席一句词变成现实'],
+  tags:[{t:'纯驾驶日',info:true}]},
+ {n:2,date:'7.26',full:'2026-07-26',wd:'周日',title:'武汉一日',meta:'宿武昌',anchor:'wh',
+  plan:['上午:湖北省博物馆(查好编钟演奏场次)','下午:黄鹤楼 → 武汉长江大桥 → 晴川阁','户部巷跳过,晚餐可在粮道街'],
+  know:['黄鹤楼:崔颢《黄鹤楼》(8上)“昔人已乘黄鹤去”;李白《送孟浩然之广陵》(小学)“烟花三月下扬州”——孟浩然去的扬州就在咱们隔壁','典故:“眼前有景道不得,崔颢题诗在上头”','武汉别称“江城”来自李白“江城五月落梅花”','长江大桥:新中国第一座长江大桥(1957),毛泽东《水调歌头·游泳》“一桥飞架南北,天堑变通途”','同一首词还有“高峡出平湖”——D15伏笔','省博:曾侯乙编钟(战国,一钟双音)、越王勾践剑(卧薪尝胆,2500年不锈)'],
+  tags:[{t:'今晚约省博'},{t:'编钟演奏'}]},
+ {n:3,date:'7.27',full:'2026-07-27',wd:'周一',title:'武汉 → 奉节',meta:'590km/7h · 宿奉节',type:'drive',anchor:'fj',
+  plan:['早8:00出发,经荆州、宜昌(不停),G42进三峡库区','傍晚滨江路看夔门方向江景'],
+  know:['过荆州讲“刘备借荆州”“关羽大意失荆州”','过兴山讲王昭君“一去紫台连朔漠”','车上预习郦道元《三峡》(8上)“自三峡七百里中,两岸连山,略无阙处”——明天进瞿塘峡对照'],
+  tags:[{t:'周一闭馆日,正好赶路',info:true}]},
+ {n:4,date:'7.28',full:'2026-07-28',wd:'周二',title:'白帝城·瞿塘峡 → 重庆',meta:'390km/5h · 宿重庆',type:'drive',anchor:'cq',
+  plan:['8:00进景区(旺季120元):白帝庙 → 风雨廊桥 → 渡船过江(凭票免费)→ 古象馆 → 古炮台','11:30出景区,午饭后出发,傍晚到重庆,不安排活动'],
+  know:['李白《早发白帝城》(小学):流放夜郎途中遇赦,“轻舟已过万重山”的“轻”是心情','刘备白帝城托孤(223年):诸葛亮“鞠躬尽瘁”的起点,为武侯祠埋线','刘禹锡在奉节(夔州)写出《竹枝词》“东边日出西边雨,道是无晴却有晴”(小学课文)','夔门=10元人民币背面,带张新钞对比','杜甫在奉节写下一生约1/3的诗(《登高》),奉节因此叫“诗城”'],
+  tags:[{t:'门票120元'},{t:'今晚约大坝8.8'}]},
+ {n:5,date:'7.29',full:'2026-07-29',wd:'周三',title:'重庆一日',meta:'宿重庆',anchor:'cq',
+  plan:['上午:白公馆 + 渣滓洞','下午:中国三峡博物馆','晚:南滨路看江,洪崖洞远观即可;顺路可经解放碑(抗战胜利纪功碑)'],
+  know:['渣滓洞/白公馆:小说《红岩》的真实发生地;小萝卜头宋振中8个月入狱、8岁牺牲,新中国最小的烈士(小学课文);江姐江竹筠','提前给孩子做心理铺垫,这是沉重但重要的一课','三峡博物馆:“巫山人”化石(约200万年前,中国最早人类化石之一)、乌杨汉阙','湖广会馆(备选):“湖广填四川”大移民的实物见证'],
+  tags:[{t:'红岩联线需预约',info:true},{t:'桥隧错峰限行'}]},
+ {n:6,date:'7.30',full:'2026-07-30',wd:'周四',title:'重庆 → 大足石刻 → 成都',meta:'300km · 宿成都',type:'drive',anchor:'cd',
+  plan:['9:30到大足宝顶山,游2.5–3h','午后出发,晚8点后再进成都(避开限行)'],
+  know:['大足石刻:世界文化遗产,南宋赵智凤用70年主持开凿;千手观音(1007只手);《父母恩重经变相》——古人用石头讲“孝顺”','与敦煌、云冈、龙门并称四大石窟','进成都讲“天府之国”:这个称号是都江堰灌出来的,后天就去看'],
+  tags:[{t:'限行:20:00后进城(限4和9)'}]},
+ {n:7,date:'7.31',full:'2026-07-31',wd:'周五',title:'杜甫草堂 + 成都博物馆/人民公园',meta:'宿成都',anchor:'cd',
+  plan:['市区不开车,地铁+打车','上午杜甫草堂,下午成博或人民公园鹤鸣茶社(旁有保路运动纪念碑)'],
+  know:['759年杜甫避安史之乱入蜀,在草堂住近4年、写诗240多首','《茅屋为秋风所破歌》(8下)“安得广厦千万间,大庇天下寒士俱欢颜”','《春夜喜雨》(小学)“好雨知时节”——成都别名“锦官城”由此而来','《江畔独步寻花》“黄四娘家花满蹊”(小学)也写在草堂','伏笔:《蜀相》“丞相祠堂何处寻,锦官城外柏森森”——明天就去'],
+  tags:[{t:'限行:不开车(限5和0)'}]},
+ {n:8,date:'8.1',full:'2026-08-01',wd:'周六',title:'武侯祠 + 金沙遗址',meta:'宿成都',anchor:'cd',
+  plan:['上午武侯祠,下午金沙遗址','今晚看阿坝州天气,定D10–13方案'],
+  know:['武侯祠:全国唯一君臣合祀祠庙(刘备+诸葛亮),刘备惠陵在旁;7上历史“三国鼎立”;9年级《出师表》“鞠躬尽瘁,死而后已”','三顾茅庐;奉节看过的托孤在这里闭环','金沙:3000年前古蜀国都邑,太阳神鸟金饰(中国文化遗产标志)、金面具;与三星堆一脉相承'],
+  tags:[{t:'今晚定A/B/C/D方案',info:true}]},
+ {n:9,date:'8.2',full:'2026-08-02',wd:'周日',title:'都江堰 + 青城山',meta:'宿成都',anchor:'cd',
+  plan:['上午都江堰(鱼嘴、飞沙堰、宝瓶口),下午青城山前山(缆车上下)'],
+  know:['都江堰:战国李冰父子建(约前256年),世界最古老且仍在用的无坝引水工程(7上历史:成都平原由此成天府)','现场讲三大件:鱼嘴“四六分水”、飞沙堰“二八排沙”、宝瓶口控水;二王庙六字诀“深淘滩、低作堰”','青城山:道教发源地之一(东汉张陵创教),“青城天下幽”;《白蛇传》白素贞“青城山下”修炼之地'],
+  tags:[{t:'今晚约机动日门票'}]},
+ {n:14,date:'8.7',full:'2026-08-07',wd:'周五',title:'成都 → 宜昌',meta:'865km/10h · 宿宜昌',type:'drive',anchor:'yc',
+  plan:['早7:00前出发(周五限行尾号5和0,7:30前上高速),G42过万州、奉节——从白帝城边上“开回诗里”','每2小时进服务区,备足零食和音频故事'],
+  know:['移动日复盘:让孩子把这一路背过的诗串一遍(黄鹤楼2首、早发白帝城、茅屋、春夜喜雨、蜀相、峨眉山月歌……)','路过云阳可以讲张飞庙“一砖一瓦编号搬家”的三峡移民故事'],
+  tags:[{t:'全程最长驾驶日'},{t:'周五限5和0,7:30前出城'}]},
+ {n:15,date:'8.8',full:'2026-08-08',wd:'周六',title:'三峡大坝 + 秭归屈原故里',meta:'宿宜昌',anchor:'yc',
+  plan:['上午:大坝A线3.5h(坛子岭+185平台+截流纪念园)','自驾在三角地/冯家湾接待站免费办通行证(带身份证、驾驶证、行驶证、电子保单)','下午:屈原故里2h,宿宜昌'],
+  know:['大坝:世界最大水利枢纽,坝长2309米、坝顶185米;五级船闸“大船爬楼梯”、升船机“小船坐电梯”','伏笔兑现:“高峡出平湖”,1956年的词,2006年的坝;百万移民“舍小家为大家”','屈原:端午节由来;《离骚》“路漫漫其修远兮,吾将上下而求索”','屈原祠在凤凰山上与大坝正面相对——古人祠堂望着现代大坝,全程最奇妙的画面','收尾:车上再背一遍《三峡》——“清荣峻茂,良多趣味”'],
+  tags:[{t:'需预约+办通行证'},{t:'汛期或见泄洪',info:true}]},
+ {n:16,date:'8.9',full:'2026-08-09',wd:'周日',title:'宜昌 → 无锡',meta:'990km/10.5h · 到家',type:'drive',anchor:'wx',
+  plan:['早7:00出发,傍晚到家','状态差可在合肥/南京加住一晚(变17天)'],
+  know:['过麻城讲“湖广填四川”——很多川渝人的族谱第一页就写着“麻城孝感乡”','回家后让孩子挑一首路上真正“看见”过的诗,讲给同学听——这就是最好的游记'],
+  tags:[{t:'备选:合肥/南京加住',info:true}]}
+];
+var FLEX={
+ A:{name:'方案A · 九寨沟',note:'舍三星堆和乐山峨眉;门票提前14天约(今晚就办,可退);顺路可加李白故里、平武报恩寺',
+   rows:[['8.3 周一','成都 → 九寨沟口(九绵高速5h;顺路可加江油青莲李白故里或平武报恩寺),宿沟口'],['8.4 周二','全天游九寨沟,宿沟口'],['8.5 周三','神仙池(嫩恩桑措)半日或沟口休整,宿沟口'],['8.6 周四','返成都(5h),宿成都']],
+   know:['因沟内九个藏族村寨得名,世界自然遗产','湖水颜色来自钙华沉积——地理活教材','诺日朗瀑布=86版《西游记》片尾取景地','沟口2000m/长海3100m,慢走防高反','九绵高速穿大熊猫国家公园,还路过李白长大的江油']},
+ B:{name:'方案B · 三星堆+乐山峨眉',note:'全低海拔,不受川西雨季影响;三星堆7.29放票要抢;去乐山顺路可加眉山三苏祠',
+   rows:[['8.3 周一','三星堆(广汉1h,周一不闭馆,再确认)+ 下午休整,宿成都'],['8.4 周二','成都 →(顺路可加眉山三苏祠)→ 乐山大佛(船观全景)→ 宿峨眉山脚'],['8.5 周三','峨眉山全天(金顶看天,阴天玩中山区清音阁+生态猴区),宿山脚'],['8.6 周四','报国寺/生态猴区补漏 → 返成都(2h)']],
+   know:['三星堆:青铜大立人、青铜神树、纵目面具——“沉睡三千年,一醒惊天下”','李白《蜀道难》“蚕丛及鱼凫,开国何茫然”说的就是古蜀国','三苏祠:苏洵、苏轼、苏辙“一门三父子”占了唐宋八大家三席','乐山大佛:唐代凿90年,71米世界第一大石刻佛,三江汇流','峨眉山:李白《峨眉山月歌》(7上)“峨眉山月半轮秋,影入平羌江水流”;普贤菩萨道场']},
+ C:{name:'方案C · 四姑娘山',note:'进阶选项:单程约200km/4h;镇上约3200m、沟尾约3800m,孩子有高反风险,需晴好窗口+无地灾预警,不适立即下撤',
+   rows:[['8.3 周一','成都 → 四姑娘山镇(约4h,过巴朗山隧道),宿镇上(早休息适应海拔)'],['8.4 周二','全天双桥沟(观光车到沟尾红杉林,逐站下行),宿镇上'],['8.5 周三','长坪沟轻徒步(枯树滩段,量力而行)或镇上休整适应,宿镇上'],['8.6 周四','猫鼻梁看四姑娘山全景 → 返成都(约4h)']],
+   know:['“蜀山之后”幺妹峰6250米,邛崃山脉最高峰','双桥沟是四姑娘山最轻松的一条沟:观光车+栈道,不用爬山','长坪沟轻徒步看幺妹峰正面,走不动就回头,绝不硬撑','沿途“中国熊猫大道”,旁边就是卧龙大熊猫栖息地','高原反应知识:头痛、恶心是信号——慢走、多喝水、不适就下撤']},
+ D:{name:'方案D · 海螺沟+泸定桥',note:'避暑优选:磨西镇仅1600m零高反,夏季15–22℃;但雨季云雾多,看贡嘎/大冰瀑布拼人品(约四成概率);需无暴雨预警',
+   rows:[['8.3 周一','成都 → 泸定桥(小学课文《飞夺泸定桥》,约3h)→ 磨西古镇(天主教堂、红军长征陈列馆),宿磨西镇'],['8.4 周二','全天海螺沟(观光车进沟,索道上海拔约3600m的四号营地看大冰瀑布/贡嘎主峰;傍晚贡嘎神汤温泉),宿磨西镇'],['8.5 周三','红石滩/雅家埂(或燕子沟)半日 + 古镇休整,宿磨西镇'],['8.6 周四','返成都(约3.5h)']],
+   know:['海螺沟是全球同纬度海拔最低的现代冰川——冰舌直接插进原始森林里','大冰瀑布高1080米,相当于360层楼,是中国最大冰瀑布','《飞夺泸定桥》1935.5.29:22位勇士攀着13根铁索夺桥','磨西会议:红军长征途中的一次重要会议,毛泽东住过天主教堂','2022年泸定6.8级地震后重建三年才重开——灾区重生的现场课']}
+};
+var BOOKINGS=[
+ {due:'2026-07-24',what:'湖北省博物馆门票(7.26 参观)',how:'“湖北省博物馆”公众号,今晚就约'},
+ {due:'2026-07-24',what:'九寨沟 8.4 门票+观光车(方案A保险,可退)',how:'“九寨沟”公众号,提前14天已放票'},
+ {due:'2026-07-26',what:'白帝城(7.28)、大足石刻(7.30)线上票',how:'携程/美团或官方公众号'},
+ {due:'2026-07-26',what:'三峡大坝 8.8 参观预约 + A线车票35元',how:'“三峡大坝旅游”公众号'},
+ {due:'2026-07-29',what:'三星堆 8.3 门票(方案B)',how:'“三星堆博物馆”公众号,提前5天放票,暑期秒光'},
+ {due:'2026-07-30',what:'杜甫草堂、武侯祠、都江堰门票',how:'各官方公众号'},
+ {due:'2026-08-02',what:'乐山大佛、峨眉山门票(方案B)',how:'官方公众号'},
+ {due:'2026-08-02',what:'四姑娘山双桥沟门票+观光车(方案C)',how:'“四姑娘山景区”公众号,旺季建议提前3天'},
+ {due:'2026-08-02',what:'海螺沟门票+观光车+索道(方案D)',how:'“海螺沟景区”公众号,日限1.25万人,提前约'}
+];
+var WX_CITIES=[
+ {name:'武汉',lat:30.593,lng:114.305},
+ {name:'奉节',lat:31.018,lng:109.464},
+ {name:'重庆',lat:29.563,lng:106.551},
+ {name:'成都',lat:30.660,lng:104.065},
+ {name:'九寨沟口',lat:33.262,lng:103.918},
+ {name:'乐山',lat:29.552,lng:103.766},
+ {name:'宜昌',lat:30.692,lng:111.286},
+ {name:'四姑娘山',lat:31.020,lng:102.830},
+ {name:'磨西镇',lat:29.655,lng:102.110}
+];
+/* 道路走线分段(OSRM 按真实公路计算) */
+var MAIN_LEGS=[
+ {id:'wx>wh',keys:['wx','wh'],label:'无锡→武汉'},
+ {id:'wh>fj',keys:['wh','fj'],label:'武汉→奉节'},
+ {id:'fj>cq',keys:['fj','cq'],label:'奉节→重庆'},
+ {id:'cq>dz>cd',keys:['cq','dz','cd'],label:'重庆→大足→成都'},
+ {id:'cd>yc',keys:['cd','yc'],label:'成都→宜昌'},
+ {id:'yc>wx',keys:['yc','wx'],label:'宜昌→无锡'}
+];
+var FLEX_ROUTE={
+ A:{id:'flexA',keys:['cd','jzg','cd'],label:'成都⇌九寨沟'},
+ B:{id:'flexB',keys:['cd','ls','em','cd'],label:'成都→乐山→峨眉→成都'},
+ C:{id:'flexC',keys:['cd','sg','cd'],label:'成都⇌四姑娘山'},
+ D:{id:'flexD',keys:['cd','ld','hg','cd'],label:'成都→泸定→海螺沟→成都'}
+};
+/* 每段路的日历、车程与沿途站点(点路段弹出) */
+var LEG_INFO={
+ 'wx>wh':{day:'D1 · 7.25 周六',h:'约8h',note:'过大别山进两湖平原',pois:['大别山(G42穿行段)'],goto:'1'},
+ 'wh>fj':{day:'D3 · 7.27 周一',h:'约7h',note:'经荆州、兴山、巴东进三峡库区',pois:['荆州古城','昭君故里(兴山)','巫山·巫峡'],goto:'3'},
+ 'fj>cq':{day:'D4 · 7.28 周二',h:'约5h',note:'上午白帝城,午后出发;过云阳、万州',pois:['白帝城·瞿塘峡','云阳张飞庙'],goto:'4'},
+ 'cq>dz>cd':{day:'D6 · 7.30 周四',h:'约4h',note:'上午大足石刻,晚8点后进成都',pois:['大足石刻(宝顶山)'],goto:'6'},
+ 'cd>yc':{day:'D14 · 8.7 周五',h:'约10h',note:'全程最长驾驶日,过奉节、云阳',pois:['云阳张飞庙'],goto:'14'},
+ 'yc>wx':{day:'D16 · 8.9 周日',h:'约10.5h',note:'最后一天,可在合肥/南京加住',pois:['麻城(鄂豫皖交界)','合肥','南京'],goto:'16'},
+ 'flexA':{day:'D10–13 · 8.3–8.6',h:'单程约5h',note:'九绵高速2025.9全线通车',pois:['李白故里(江油青莲镇)','平武报恩寺','九寨沟'],goto:'flex'},
+ 'flexB':{day:'D10–13 · 8.3–8.6',h:'单程约2h',note:'成乐高速经眉山',pois:['三苏祠(眉山)','乐山大佛','峨眉山(报国寺)'],goto:'flex'},
+ 'flexC':{day:'D10–13 · 8.3–8.6',h:'单程约4h',note:'都汶高速+中国熊猫大道,翻巴朗山',pois:['四姑娘山(双桥沟)'],goto:'flex'},
+ 'flexD':{day:'D10–13 · 8.3–8.6',h:'单程约3.5h',note:'雅康高速+泸石高速(2025年底通车)',pois:['泸定桥','磨西古镇','海螺沟(冰川森林公园)'],goto:'flex'}
+};
+
+/* ============ 状态 ============ */
+var state={
+ done:load('cj-done',{}),
+ books:load('cj-books',{}),
+ plan:load('cj-plan',{choice:null}),
+ me:null
+};
+var roadCache=load('cj-roads-v1',null);
+
+/* ============ 入场动画(IntersectionObserver) ============ */
+var rvIO=null;
+function riseScan(){
+ var els=document.querySelectorAll('.day,.cul-item,.scard');
+ if(!('IntersectionObserver' in window)){els.forEach(function(e){e.classList.add('rv','in');});return;}
+ if(!rvIO){rvIO=new IntersectionObserver(function(entries){entries.forEach(function(en){if(en.isIntersecting){en.target.classList.add('in');rvIO.unobserve(en.target);}});},{rootMargin:'0px 0px -6% 0px',threshold:0.02});}
+ els.forEach(function(e){if(!e.classList.contains('in')&&!e.classList.contains('rv')){e.classList.add('rv');rvIO.observe(e);}});
+}
+
+/* ============ 标签页 ============ */
+var mapFitted=false;
+function showTab(i){
+ for(var k=1;k<=4;k++){var s=document.getElementById('sec'+k),t=document.getElementById('tab'+k);if(s)s.className=k===i?'on':'';if(t)t.className=k===i?'on':'';}
+ if(i===3&&map)setTimeout(function(){map.invalidateSize();if(!mapFitted){fitAll();mapFitted=true;}},100);
+}
+
+/* ============ 行程时间轴 ============ */
+function lis(a){return a.map(function(x){return '<li>'+x+'</li>';}).join('');}
+function flexChoice(){return state.plan.choice||'A';}
+function setPlan(c){state.plan.choice=c;save('cj-plan',state.plan);renderTimeline();drawRoutes();var el=document.getElementById('dayflex');if(el)el.classList.add('open');}
+function renderTimeline(){
+ var html='';
+ for(var i=0;i<DAYS.length;i++)html+=dayCard(DAYS[i]);
+ document.getElementById('sec1').innerHTML=html;
+ riseScan();
+}
+function dayCard(d){
+ var cls='day'+(d.type?' '+d.type:'')+(state.done[d.n]?' done':'');
+ var h='';
+ if(d.n===14){h+=flexCard();}
+ h+='<article class="'+cls+'" id="day'+d.n+'"><div class="d-core">';
+ h+='<div class="d-head" onclick="toggleDay('+d.n+')">';
+ h+='<div class="d-badge">D'+d.n+'</div>';
+ h+='<div class="d-title"><h3>'+d.title+'</h3><div class="d-meta">'+d.date+' '+d.wd+(d.meta?' · '+d.meta:'')+'</div></div>';
+ h+='<label class="d-done" onclick="event.stopPropagation()"><input type="checkbox" '+(state.done[d.n]?'checked':'')+' onchange="setDone('+d.n+',this.checked)"></label></div>';
+ h+='<div class="d-body">';
+ if(d.plan)h+='<h4>行程</h4><ul>'+lis(d.plan)+'</ul>';
+ if(d.know)h+='<h4>讲给孩子</h4><ul class="know">'+lis(d.know)+'</ul>';
+ if(d.tags&&d.tags.length)h+='<div class="tags">'+d.tags.map(function(t){return '<span class="tag'+(t.info?' info':'')+'">'+t.t+'</span>';}).join('')+'</div>';
+ h+='</div></div></article>';
+ return h;
+}
+function flexCard(){
+ var c=flexChoice(),p=FLEX[c];
+ var h='<article class="day flex" id="dayflex"><div class="d-core">';
+ h+='<div class="d-head" onclick="document.getElementById(\'dayflex\').classList.toggle(\'open\')">';
+ h+='<div class="d-badge">D10–13</div><div class="d-title"><h3>机动四天 · '+p.name+'</h3><div class="d-meta">8.3–8.6 · 出发前3天看天气定(智能助手会自动建议)</div></div>';
+ h+='<label class="d-done" onclick="event.stopPropagation()"><input type="checkbox" '+(state.done[10]?'checked':'')+' onchange="setDone(10,this.checked)"></label></div>';
+ h+='<div class="d-body" style="padding-left:14px">';
+ h+='<div class="flex-sw">';
+ h+='<button class="'+(c==='A'?'on':'')+'" onclick="setPlan(\'A\')">A · 九寨</button>';
+ h+='<button class="'+(c==='B'?'on':'')+'" onclick="setPlan(\'B\')">B · 乐峨</button>';
+ h+='<button class="'+(c==='C'?'on':'')+'" onclick="setPlan(\'C\')">C · 四姑娘</button>';
+ h+='<button class="'+(c==='D'?'on':'')+'" onclick="setPlan(\'D\')">D · 海螺沟</button></div>';
+ h+='<h4>行程</h4><ul>'+p.rows.map(function(r){return '<li><b>'+r[0]+'</b> '+r[1]+'</li>';}).join('')+'</ul>';
+ h+='<h4>讲给孩子</h4><ul class="know">'+lis(p.know)+'</ul>';
+ h+='<div class="flex-note">▎本方案:'+p.note+'</div>';
+ ['A','B','C','D'].forEach(function(k){if(k!==c)h+='<div class="flex-note">▎'+FLEX[k].name+':'+FLEX[k].note+'</div>';});
+ h+='</div></div></article>';
+ return h;
+}
+function toggleDay(n){var el=document.getElementById('day'+n);if(el)el.classList.toggle('open');}
+function setDone(n,v){state.done[n]=v;save('cj-done',state.done);var el=document.getElementById(n===10?'dayflex':'day'+n);if(el)el.classList.toggle('done',v);updateProgress();}
+function updateProgress(){
+ var c=0,i;
+ for(i=1;i<=9;i++)if(state.done[i])c++;
+ if(state.done[10])c+=4;
+ for(i=14;i<=16;i++)if(state.done[i])c++;
+ document.getElementById('progBar').style.width=(c/16*100)+'%';
+ document.getElementById('progTxt').textContent='已完成 '+c+' / 16 天'+(c===16?' · 全程收官!':'');
+}
+
+/* ============ 文史导览 ============ */
+function renderCulture(){
+ var groups=[['out','去程 · D1–D6'],['cd','成都段 · D7–D9'],['flex','机动四天 · D10–D13'],['back','回程 · D14–D16']];
+ var html='';
+ groups.forEach(function(g){
+  html+='<div class="cul-group"><span>'+g[1]+'</span></div>';
+  POIS.forEach(function(p){
+   if(p.seg!==g[0])return;
+   html+='<div class="cul-item" style="cursor:pointer" onclick="openPoi(this.dataset.n)" data-n="'+p.name+'"><div class="cul-core"><span class="cul-day'+(p.pass?' pass':'')+'">'+p.day+'</span><div><b>'+p.name+(p.pass?' <span style="font-weight:400;font-size:11px;color:var(--amber)">车览</span>':'')+'</b><p>'+p.info+'</p></div></div></div>';
+  });
+ });
+ document.getElementById('culBox').innerHTML=html;
+ riseScan();
+}
+
+/* ============ 地图 ============ */
+var map=null,meMarker=null,routeLayers=[],legLines={},pickedLeg=null;
+var ALL_LEGS=MAIN_LEGS.concat([FLEX_ROUTE.A,FLEX_ROUTE.B,FLEX_ROUTE.C,FLEX_ROUTE.D]);
+function pts(keys){return keys.map(function(k){var a=ANCHORS[k];var g=wgs2gcj(a.lat,a.lng);return[g[0],g[1]];});}
+function legLatLngs(id,keys){if(roadCache&&roadCache[id]&&roadCache[id].g)return roadCache[id].g;return pts(keys);}
+function estLegKm(keys){var t=0;for(var i=1;i<keys.length;i++)t+=hav(ANCHORS[keys[i-1]],ANCHORS[keys[i]]);return Math.round(t*1.25);}
+function legKm(id,keys){if(roadCache&&roadCache[id]&&roadCache[id].km)return roadCache[id].km;return estLegKm(keys);}
+function baseStyle(id){
+ if(id==='flexA')return{color:'#2f6fb2',weight:6,dashArray:'10 8',opacity:flexChoice()==='A' ? .95 : .45};
+ if(id==='flexB')return{color:'#e07b24',weight:6,dashArray:'10 8',opacity:flexChoice()==='B' ? .95 : .45};
+ if(id==='flexC')return{color:'#d13c3c',weight:6,dashArray:'10 8',opacity:flexChoice()==='C' ? .95 : .45};
+ if(id==='flexD')return{color:'#4ca64c',weight:6,dashArray:'10 8',opacity:flexChoice()==='D' ? .95 : .45};
+ return{color:'#2f6f5e',weight:6,opacity:.9};
+}
+function initMap(){
+ if(typeof L==='undefined'){document.getElementById('map').innerHTML='<div style="padding:24px;color:#7a746a">地图组件加载失败(需联网加载 Leaflet)。行程页不受影响。</div>';return;}
+ map=L.map('map',{center:[31.2,110.5],zoom:5});
+ L.tileLayer('https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}',{subdomains:['1','2','3','4'],maxZoom:18,attribution:'© 高德地图'}).addTo(map);
+ POIS.forEach(function(p){var g=wgs2gcj(p.lat,p.lng);
+  L.circleMarker([g[0],g[1]],{radius:p.pass?4:5,color:'#fff',weight:2,fillColor:p.pass?'#b8791f':'#c0513f',fillOpacity:1}).addTo(map)
+   .bindPopup('<b>'+p.name+'</b> <span style="color:#7a746a">'+p.day+(p.pass?' · 车览':'')+'</span><br>'+p.info+'<br><a style="color:var(--teal);cursor:pointer;text-decoration:underline" onclick="openPoi(this.dataset.n)" data-n="'+p.name+'">讲透 →</a>');});
+ var links={wh:['wx>wh','wh>fj'],fj:['wh>fj','fj>cq'],cq:['fj>cq','cq>dz>cd'],dz:['cq>dz>cd',null],cd:['cq>dz>cd','cd>yc'],yc:['cd>yc','yc>wx'],wx:['yc>wx',null]};
+ ['wh','fj','cq','dz','cd','yc','wx'].forEach(function(k,i){var a=ANCHORS[k];var g=wgs2gcj(a.lat,a.lng);
+  var pop='<b>'+a.name+'</b> <span style="color:#7a746a">'+a.stay+'</span>';
+  var lk=links[k];
+  if(k==='dz'){pop+='<br>所在段:重庆→成都 全段 '+legKm('cq>dz>cd',['cq','dz','cd'])+' km';}
+  else{var parts=[];ALL_LEGS.forEach(function(l){if(lk&&lk[0]===l.id)parts.push('上段 '+l.label+' '+legKm(l.id,l.keys)+'km');if(lk&&lk[1]===l.id)parts.push('下段 '+l.label+' '+legKm(l.id,l.keys)+'km');});if(parts.length)pop+='<br>'+parts.join('<br>');}
+  L.marker([g[0],g[1]],{icon:L.divIcon({className:'',html:'<div class="anchor-pin" style="width:24px;height:24px;background:#2f6f5e">'+(i+1)+'</div>',iconSize:[24,24],iconAnchor:[12,12]})}).addTo(map).bindPopup(pop);});
+ drawRoutes();
+ map.on('click',function(e){if(shouldIgnoreMapClick(e.originalEvent&&e.originalEvent.target))return;setMe(e.latlng.lat,e.latlng.lng,true);});
+ fitAll();
+}
+function drawRoutes(){
+ if(!map)return;
+ routeLayers.forEach(function(l){map.removeLayer(l);});routeLayers=[];legLines={};
+ ALL_LEGS.forEach(function(l){
+  var line=L.polyline(legLatLngs(l.id,l.keys),baseStyle(l.id)).addTo(map);
+  line.bindTooltip(l.label+' '+legKm(l.id,l.keys)+'km',{permanent:true,direction:'center',className:'leg-km'});
+  line.on('click',function(e){L.DomEvent.stopPropagation(e.originalEvent);pickLeg(l.id);});
+  legLines[l.id]=line;routeLayers.push(line);
+ });
+}
+function pickLeg(id){
+ if(pickedLeg===id){pickedLeg=null;Object.keys(legLines).forEach(function(k){legLines[k].setStyle(baseStyle(k));});document.getElementById('legInfoWrap').style.display='none';return;}
+ pickedLeg=id;
+ Object.keys(legLines).forEach(function(k){legLines[k].setStyle(baseStyle(k));});
+ var ln=legLines[id];
+ if(ln){var st={weight:9,color:'#26241f',opacity:.95};if(id.indexOf('flex')===0)st.dashArray='10 8';ln.setStyle(st);}
+ showLegInfo(id);
+}
+function showLegInfo(id){
+ var leg=null;ALL_LEGS.forEach(function(l){if(l.id===id)leg=l;});
+ if(!leg)return;
+ var info=LEG_INFO[id]||{};
+ var actual=roadCache&&roadCache[id]&&roadCache[id].km;
+ var html='<h4>'+leg.label+' · '+legKm(id,leg.keys)+' km'+(actual?'':' <span style="font-size:11px;color:var(--muted)">(估算)</span>')+'</h4>';
+ html+='<div class="l-meta">'+(info.day||'')+(info.h?' · '+info.h:'')+(info.note?' · '+info.note:'')+'</div>';
+ if(info.pois&&info.pois.length){
+  html+='<div class="dim" style="margin:4px 0">沿途站点:</div>';
+  info.pois.forEach(function(nm){
+   var poi=null;POIS.forEach(function(p){if(p.name===nm)poi=p;});
+   if(poi)html+='<div class="l-poi"><b>'+poi.name+'</b><p>'+poi.info+'</p></div>';
+  });
+ }
+ if(info.goto)html+='<span class="l-link" onclick="gotoDay(\''+info.goto+'\')">查看当日行程 →</span>';
+ var box=document.getElementById('legInfo');box.innerHTML=html;
+ var wrap=document.getElementById('legInfoWrap');wrap.style.display='block';wrap.classList.add('in');
+}
+function gotoDay(g){
+ showTab(1);
+ var el=document.getElementById(g==='flex'?'dayflex':'day'+g);
+ if(el){el.classList.add('open');setTimeout(function(){el.scrollIntoView({behavior:'smooth',block:'start'});},100);}
+}
+function fitAll(){if(!map)return;map.fitBounds(L.latLngBounds(pts(['wx','wh','fj','cq','dz','cd','jzg','ls','em','sg','ld','hg','yc'])).pad(0.03));}
+function locateMe(){
+ if(!navigator.geolocation){setNear('此浏览器不支持定位,请点地图手动设置。');return;}
+ setNear('正在定位…');
+ navigator.geolocation.getCurrentPosition(function(pos){setMe(pos.coords.latitude,pos.coords.longitude,false);},
+  function(){setNear('定位失败(权限或需安全环境)。请点地图手动设置“我在哪”。');},{enableHighAccuracy:true,timeout:10000});
+}
+function shouldIgnoreMapClick(t){
+ return !!(t&&t.closest&&(t.closest('.leaflet-marker-icon')||t.closest('.leaflet-popup')||t.closest('path.leaflet-interactive')||t.closest('.leaflet-tooltip-pane')||t.closest('.leaflet-control')));
+}
+function setMe(lat,lng,manual){
+ var wlat,wlng,mlat,mlng;
+ if(manual){var w=gcj2wgs(lat,lng);wlat=w[0];wlng=w[1];mlat=lat;mlng=lng;}
+ else{wlat=lat;wlng=lng;var g=wgs2gcj(lat,lng);mlat=g[0];mlng=g[1];}
+ state.me={lat:wlat,lng:wlng};
+ if(map){
+  if(meMarker)map.removeLayer(meMarker);
+  meMarker=L.marker([mlat,mlng],{icon:L.divIcon({className:'',html:'<div class="me-pulse" style="width:18px;height:18px"></div>',iconSize:[18,18],iconAnchor:[9,9]})}).addTo(map)
+   .bindPopup(manual?'手动设置的位置':'GPS 当前位置').openPopup();
+  map.setView([mlat,mlng],Math.max(map.getZoom(),8));}
+ reportNearest(wlat,wlng);
+ runRadar();
+}
+function reportNearest(lat,lng){
+ var best=null,bd=1e9;
+ POIS.forEach(function(p){var d=hav({lat:lat,lng:lng},{lat:p.lat,lng:p.lng});if(d<bd){bd=d;best={name:p.name,day:p.day,d:d};}});
+ var ba='',bad=1e9;
+ Object.keys(ANCHORS).forEach(function(k){var a=ANCHORS[k];var d=hav({lat:lat,lng:lng},a);if(d<bad){bad=d;ba=a.name;}});
+ var t='你距最近景点【'+best.name+'】('+best.day+')约 '+best.d.toFixed(1)+' km;距最近宿营城市【'+ba+'】约 '+Math.round(bad)+' km。';
+ if(best.d<2)t+=' 已到附近,可以签到打卡了。';
+ setNear(t);
+}
+function setNear(t){document.getElementById('nearTxt').textContent=t;}
+
+/* ============ 真实道路走线(OSRM) ============ */
+function roadFetch(keys){
+ var coords=keys.map(function(k){return ANCHORS[k].lng+','+ANCHORS[k].lat;}).join(';');
+ var url='https://router.project-osrm.org/route/v1/driving/'+coords+'?overview=full&geometries=geojson';
+ return fetch(url).then(function(r){return r.json();}).then(function(j){
+  if(j.code!=='Ok'||!j.routes||!j.routes[0])throw new Error('osrm');
+  return j.routes[0];
+ });
+}
+function loadRoads(){
+ var all=ALL_LEGS;
+ var cache=roadCache||{};var i=0;
+ function finish(){
+  roadCache=cache;
+  try{localStorage.setItem('cj-roads-v1',JSON.stringify(cache));}catch(e){}
+  var rb=document.getElementById('roadBox');
+  if(rb){
+   var parts=all.map(function(l){var c=cache[l.id];return l.label+' <b>'+(c&&c.km?c.km+'km':'≈直线示意')+'</b>';});
+   rb.innerHTML='实际道路里程(OSRM/OSM):'+parts.join(' · ')+'<br>走线已按真实公路绘制并缓存,之后离线可用。点任意路段可看该段距离与沿途站点。';
+  }
+ }
+ function next(){
+  if(i>=all.length){finish();return;}
+  var leg=all[i];i++;
+  if(cache[leg.id]&&cache[leg.id].g){next();return;}
+  roadFetch(leg.keys).then(function(route){
+   var ll=route.geometry.coordinates.map(function(c){var g=wgs2gcj(c[1],c[0]);return[Math.round(g[0]*1e4)/1e4,Math.round(g[1]*1e4)/1e4];});
+   cache[leg.id]={g:ll,km:Math.round(route.distance/1000)};
+   roadCache=cache;drawRoutes();
+  }).catch(function(){}).then(function(){next();});
+ }
+ next();
+}
+
+/* ============ 天气与方案决策 ============ */
+var WXC={0:'☀️',1:'🌤',2:'⛅',3:'☁️',45:'🌫',48:'🌫',51:'🌦',53:'🌦',55:'🌦',61:'🌧',63:'🌧',65:'🌧',66:'🌧',67:'🌧',71:'❄️',73:'❄️',75:'❄️',77:'❄️',80:'🌦',81:'🌦',82:'🌧',95:'⛈',96:'⛈',99:'⛈'};
+function wxIcon(c){return WXC[c]||'·';}
+function loadWeather(){
+ var lats=WX_CITIES.map(function(c){return c.lat;}).join(',');
+ var lngs=WX_CITIES.map(function(c){return c.lng;}).join(',');
+ var url='https://api.open-meteo.com/v1/forecast?latitude='+lats+'&longitude='+lngs+'&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_probability_max,precipitation_sum&timezone=Asia%2FShanghai&forecast_days=16';
+ fetch(url).then(function(r){return r.json();}).then(function(data){
+  var arr=Array.isArray(data)?data:[data];
+  renderWx(arr);
+  var now=new Date();
+  document.getElementById('wxTime').textContent='更新于 '+(now.getMonth()+1)+'.'+now.getDate()+' '+('0'+now.getHours()).slice(-2)+':'+('0'+now.getMinutes()).slice(-2);
+ }).catch(function(){
+  document.getElementById('wxBox').textContent='天气获取失败(需联网)。决策请参考手机天气App:山区有暴雨/地灾预警就选方案B(乐山峨眉,全低海拔)。';
+ });
+}
+function renderWx(arr){
+ var today=new Date();today=new Date(today.getFullYear(),today.getMonth(),today.getDate());
+ var html='';
+ arr.forEach(function(c,ci){
+  var d=c.daily;if(!d||!d.time)return;
+  html+='<div class="wx-city"><b>'+WX_CITIES[ci].name+'</b><div class="wx-days">';
+  var shown=0;
+  for(var i=0;i<d.time.length&&shown<7;i++){
+   var dt=new Date(d.time[i]+'T00:00:00');
+   if(dt<today)continue;
+   html+='<div class="wx-day"><span class="ic">'+wxIcon(d.weathercode[i])+'</span>'+(dt.getMonth()+1)+'.'+dt.getDate()+'<br>'+Math.round(d.temperature_2m_min[i])+'–'+Math.round(d.temperature_2m_max[i])+'°'+((d.precipitation_probability_max&&d.precipitation_probability_max[i]!=null)?'<br>💧'+d.precipitation_probability_max[i]+'%':'')+'</div>';
+   shown++;
+  }
+  html+='</div></div>';
+ });
+ document.getElementById('wxBox').innerHTML=html;
+ var a=flexMetrics(arr[4]),b=flexMetrics(arr[5]),c=flexMetrics(arr[7]),d=flexMetrics(arr[8]);
+ var box=document.getElementById('wxVerdict');
+ if(!a||!b){box.innerHTML='<div class="verdict unk">8.3–8.6 暂超出预报范围,7.31 起打开这里会自动给出方案建议。</div>';return;}
+ var txt='8.3–8.6 预报:九寨沟 ≤'+a.maxProb+'%/'+a.sum.toFixed(0)+'mm';
+ if(d)txt+=';海螺沟 ≤'+d.maxProb+'%/'+d.sum.toFixed(0)+'mm';
+ if(c)txt+=';四姑娘山 ≤'+c.maxProb+'%/'+c.sum.toFixed(0)+'mm';
+ txt+=';乐山 ≤'+b.maxProb+'%/'+b.sum.toFixed(0)+'mm。';
+ var rec,cls;
+ if(a.maxProb<=50&&a.sum<8){rec='A';cls='A';txt+=' 九寨窗口不错,<b>推荐方案A(九寨沟)</b>;山区天气多变,8.2 再确认阿坝州无地灾预警。';}
+ else if(d&&d.maxProb<=50&&d.sum<8){rec='D';cls='A';txt+=' 九寨方向雨大,<b>推荐方案D(海螺沟+泸定桥)</b>:磨西镇仅1600m无高反、避暑正好;看贡嘎拼人品,但温泉+泸定桥兜底不亏。';}
+ else if(c&&c.maxProb<=45&&c.sum<6){rec='C';cls='A';txt+=' 四姑娘山窗口尚可,可选<b>方案C(四姑娘山)</b>——务必做好高反预案,孩子不适立即下撤。';}
+ else{rec='B';cls='B';txt+=' 山区雨水普遍偏大,<b>推荐方案B(三星堆+乐山峨眉)</b>,低海拔不受影响。';}
+ box.innerHTML='<div class="verdict '+cls+'">'+txt+'</div>';
+ if(!state.plan.choice){state.plan.choice=rec;save('cj-plan',state.plan);renderTimeline();drawRoutes();}
+}
+function flexMetrics(city){
+ if(!city||!city.daily)return null;
+ var idx=[],i;
+ for(i=0;i<city.daily.time.length;i++){var t=city.daily.time[i];if(t>='2026-08-03'&&t<='2026-08-06')idx.push(i);}
+ if(!idx.length)return null;
+ var mp=0,sum=0;
+ idx.forEach(function(i){var p=city.daily.precipitation_probability_max?city.daily.precipitation_probability_max[i]:null;if(p!=null&&p>mp)mp=p;var s=city.daily.precipitation_sum?city.daily.precipitation_sum[i]:0;if(s)sum+=s;});
+ return {maxProb:mp,sum:sum};
+}
+
+/* ============ 剩余行程最优重排 ============ */
+function flexAnchor(){var c=flexChoice();return c==='A'?'jzg':(c==='C'?'sg':(c==='D'?'hg':'ls'));}
+function currentAnchor(){
+ var order=['wx','wh','fj','cq','cd','yc'];
+ var dayAnchor={1:'wh',2:'wh',3:'fj',4:'cq',5:'cq',6:'cd',7:'cd',8:'cd',9:'cd',14:'yc',15:'yc'};
+ var last='wx',bestIdx=0;
+ Object.keys(dayAnchor).forEach(function(n){if(state.done[n]){var idx=order.indexOf(dayAnchor[n]);if(idx>bestIdx){bestIdx=idx;last=dayAnchor[n];}}});
+ if(last!=='wx')return last;
+ if(state.me){var bk='wx',bd=1e9;Object.keys(ANCHORS).forEach(function(k){var d=hav(state.me,ANCHORS[k]);if(d<bd){bd=d;bk=k;}});return bk;}
+ return 'wx';
+}
+function permute(a){if(a.length<=1)return[a];var r=[];for(var i=0;i<a.length;i++){var rest=a.slice(0,i).concat(a.slice(i+1));permute(rest).forEach(function(p){r.push([a[i]].concat(p));});}return r;}
+function runOptimize(){
+ var order=['wh','fj','cq','cd','yc'];
+ var anchorDays={wh:[1,2],fj:[3],cq:[4,5],cd:[6,7,8,9],yc:[14,15]};
+ var doneAnchor=function(k){return anchorDays[k].every(function(n){return state.done[n];});};
+ var cur=currentAnchor();
+ var curIdx=order.indexOf(cur);
+ var start=(curIdx>=0)?cur:'wx';
+ if(curIdx<0)curIdx=-1;
+ var rem=order.filter(function(k,i){return i>curIdx&&!doneAnchor(k);});
+ var box=document.getElementById('optBox');
+ if(!rem.length){box.innerHTML='没有需要重排的剩余宿营点了——按计划只剩回家。';return;}
+ var legs=function(seq){var t=0,prev=start;seq.forEach(function(k){t+=hav(ANCHORS[prev],ANCHORS[k]);prev=k;});t+=hav(ANCHORS[prev],ANCHORS.wx);return t*1.25;};
+ var best=null,bc=1e18;
+ permute(rem).forEach(function(p){var c=legs(p);if(c<bc){bc=c;best=p;}});
+ var orig=rem.slice(),oc=legs(orig);
+ var names=function(seq){return seq.map(function(k){return ANCHORS[k].name;}).join(' → ');};
+ var html='当前基准点:<b>'+ANCHORS[start].name+'</b>'+(state.me?'(按你的定位)':'(按完成进度)')+'<br>';
+ html+='<div class="route-line">最优顺序:'+ANCHORS[start].name+' → <b>'+names(best)+'</b> → 无锡 ≈ '+Math.round(bc)+' km</div>';
+ html+='<div class="route-line">原计划顺序:'+ANCHORS[start].name+' → '+names(orig)+' → 无锡 ≈ '+Math.round(oc)+' km</div>';
+ if(Math.abs(bc-oc)<1)html+='<div class="km-diff">原计划已是最优,无需调整。</div>';
+ else if(bc<oc-1)html+='<div class="km-diff">建议按最优顺序调整,估算可省约 '+Math.round(oc-bc)+' km。</div>';
+ else html+='<div class="km-diff">原计划更优,保持。</div>';
+ html+='<div class="dim" style="margin-top:6px">注:大足固定在重庆—成都之间;方案A/B/C/D为成都往返支线,不参与排序;此处里程为估算值,地图页为实际道路里程。</div>';
+ box.innerHTML=html;
+}
+
+/* ============ 预约提醒 ============ */
+function renderBooks(){
+ var todayStr=fmtDate(new Date());
+ var html='';
+ BOOKINGS.forEach(function(b,i){
+  var done=!!state.books[i];
+  var cls='book'+(done?' done':''),dueTxt;
+  if(b.due<todayStr){if(!done){cls+=' urgent';dueTxt='已过期!';}else{dueTxt='已过期';}}
+  else if(b.due===todayStr){cls+=' urgent';dueTxt='今天办';}
+  else{var diff=Math.round((new Date(b.due)-new Date(todayStr))/86400000);if(diff<=2&&!done)cls+=' soon';dueTxt=b.due.slice(5).replace('-','.')+'前';}
+  html+='<div class="'+cls+'"><input type="checkbox" '+(done?'checked':'')+' onchange="setBook('+i+',this.checked)"><div class="b-txt">'+b.what+'<div class="b-how">'+b.how+'</div></div><span class="b-due">'+dueTxt+'</span></div>';
+ });
+ document.getElementById('bookBox').innerHTML=html;
+}
+function setBook(i,v){state.books[i]=v;save('cj-books',state.books);renderBooks();}
+
+/* ============ 今日状态 ============ */
+function renderToday(){
+ var t=fmtDate(new Date());
+ var el=document.getElementById('todayBody');
+ var hit=null;
+ for(var i=0;i<DAYS.length;i++){if(DAYS[i].full===t){hit=DAYS[i];break;}}
+ var html='';
+ if(hit){html='<div class="big">今天 D'+hit.n+' · '+hit.title+'</div><div class="dim">'+hit.meta+'</div><ul style="margin:6px 0 0;padding-left:18px">'+lis(hit.plan)+'</ul>';}
+ else if(t>='2026-08-03'&&t<='2026-08-06'){var c=flexChoice();var rowMap={'2026-08-03':0,'2026-08-04':1,'2026-08-05':2,'2026-08-06':3};html='<div class="big">今天 '+FLEX[c].name+'</div><div class="dim">'+FLEX[c].rows[rowMap[t]][1]+'</div>';}
+ else if(t<'2026-07-25'){html='<div class="big">明天出发!</div><div class="dim">今晚请完成:湖北省博物馆(7.26)、九寨沟 8.4(方案A保险)两项预约;检查车辆、备齐证件(身份证、驾驶证、行驶证、电子保单)。</div>';}
+ else if(t>'2026-08-09'){html='<div class="big">行程已结束</div><div class="dim">欢迎回家,记得整理照片和孩子的心得。</div>';}
+ else{html='<div class="dim">今天对应日程见行程页。</div>';}
+ el.innerHTML=html;
+ var openN=hit?hit.n:(t<'2026-07-25'?1:null);
+ if(t>='2026-08-03'&&t<='2026-08-06')openN=10;
+ if(openN){var el2=document.getElementById(openN===10?'dayflex':'day'+openN);if(el2)el2.classList.add('open');}
+}
+
+/* ============ 文史地雷达 ============ */
+var CAT_STYLE={'文':{color:'#8e5aa2'},'史':{color:'#c0513f'},'地':{color:'#2f6f5e'},'科':{color:'#35608f'}};
+var radarMarks=[],radarCircles=[],radarData=[];
+var rfCats={'文':true,'史':true,'地':true,'科':true},rfRoute=true;
+var aiPacks=load('cj-ai-packs',{}),dsKey=load('cj-ds-key','');
+function allRadarPoints(){
+ var base=POIS.map(function(p){var cq=CAT_Q[p.name]||['史',''];return {n:p.name,c:cq[0],lat:p.lat,lng:p.lng,info:p.info,q:cq[1],src:'curated'};});
+ var extra=RADAR_EXTRA.map(function(p){return {n:p.n,c:p.c,lat:p.lat,lng:p.lng,info:p.info,q:p.q,src:'curated'};});
+ var ai=[];
+ Object.keys(aiPacks).forEach(function(g){(aiPacks[g].pts||[]).forEach(function(p){ai.push({n:p.name,c:p.cat,lat:p.lat,lng:p.lng,info:p.info,q:p.q,src:'ai'});});});
+ return base.concat(extra,ai);
+}
+function bearing8(a,b){
+ var y=Math.sin((b.lng-a.lng)*Math.PI/180)*Math.cos(b.lat*Math.PI/180);
+ var x=Math.cos(a.lat*Math.PI/180)*Math.sin(b.lat*Math.PI/180)-Math.sin(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.cos((b.lng-a.lng)*Math.PI/180);
+ var brg=(Math.atan2(y,x)*180/Math.PI+360)%360;
+ return ['北','东北','东','东南','南','西南','西','西北'][Math.round(brg/45)%8];
+}
+function nearRoute(p,maxKm){
+ var g=wgs2gcj(p.lat,p.lng),best=1e9;
+ ALL_LEGS.forEach(function(l){var ll=legLatLngs(l.id,l.keys);for(var i=0;i<ll.length;i++){var d=hav({lat:g[0],lng:g[1]},{lat:ll[i][0],lng:ll[i][1]});if(d<best)best=d;}});
+ return best<=maxKm;
+}
+function rfToggle(el){
+ var c=el.getAttribute('data-c');
+ if(c==='route'){rfRoute=!rfRoute;el.classList.toggle('on',rfRoute);}
+ else{rfCats[c]=!rfCats[c];el.classList.toggle('on',rfCats[c]);}
+ runRadar();
+}
+function runRadar(){
+ var st=document.getElementById('radarStatus'),listEl=document.getElementById('radarList');
+ if(!st||!listEl)return;
+ if(!state.me){st.textContent='先点“定位我”或点地图设置位置,雷达才能开机。';return;}
+ var c0=state.me;
+ if(map){
+  radarCircles.forEach(function(x){map.removeLayer(x);});radarCircles=[];
+  radarMarks.forEach(function(x){map.removeLayer(x);});radarMarks=[];
+  var g0=wgs2gcj(c0.lat,c0.lng);
+  [25,50,100].forEach(function(r){radarCircles.push(L.circle(g0,{radius:r*1000,color:'#2f6f5e',weight:1,dashArray:'4 6',fill:false,opacity:.45}).addTo(map));});
+ }
+ var pts=allRadarPoints().map(function(p){
+   var d=hav(c0,{lat:p.lat,lng:p.lng});
+   return {n:p.n,c:p.c,lat:p.lat,lng:p.lng,info:p.info,q:p.q,src:p.src,d:d,dir:bearing8(c0,{lat:p.lat,lng:p.lng})};
+  }).filter(function(p){return p.d<=100&&rfCats[p.c];});
+ if(rfRoute)pts=pts.filter(function(p){return nearRoute(p,20);});
+ pts.sort(function(a,b){return a.d-b.d;});
+ radarData=pts;
+ var html='';
+ pts.forEach(function(p,i){
+  if(map){var g2=wgs2gcj(p.lat,p.lng);
+   radarMarks.push(L.circleMarker(g2,{radius:5,color:'#fff',weight:1.5,fillColor:CAT_STYLE[p.c].color,fillOpacity:.95}).addTo(map)
+    .bindPopup('<b>'+p.n+'</b> <span style="color:#7a746a">'+p.c+' · '+p.d.toFixed(0)+'km '+p.dir+(p.src==='ai'?' · AI':'' )+'</span><br>'+p.info+(p.q?'<br><i>想一想:'+p.q+'</i>':'')));}
+  html+='<div class="r-item" data-n="'+p.n+'" onclick="radarZoom('+i+');openPoi(this.dataset.n)"><span class="r-cat" style="background:'+CAT_STYLE[p.c].color+'">'+p.c+'</span><div class="r-main"><b>'+p.n+(p.src==='ai'?'<span class="r-ai">AI</span>':'')+'</b><p>'+p.info+'</p>'+(p.q?'<p class="r-q">想一想:'+p.q+'</p>':'')+'</div><span class="r-dist">'+p.d.toFixed(0)+'km<br>'+p.dir+'</span></div>';
+ });
+ listEl.innerHTML=html||'<div class="dim">100 公里内没有匹配点位(试试关闭“顺路”或换个分类)。</div>';
+ var cnt=function(cc){return pts.filter(function(p){return p.c===cc;}).length;};
+ st.innerHTML='圆心:当前位置 · 100km 内 <b>'+pts.length+'</b> 个点'+(rfRoute?'(顺路模式)':'')+' · 文'+cnt('文')+' 史'+cnt('史')+' 地'+cnt('地')+' 科'+cnt('科');
+}
+function radarZoom(i){var p=radarData[i];if(!p||!map)return;var g=wgs2gcj(p.lat,p.lng);map.setView(g,Math.max(map.getZoom(),9));}
+/* ---- DeepSeek AI 深度扫描 ---- */
+function gridId(me){return (Math.round(me.lat*2)/2).toFixed(1)+'_'+(Math.round(me.lng*2)/2).toFixed(1);}
+function validAiPt(p){return p&&p.name&&CAT_STYLE[p.cat]&&typeof p.lat==='number'&&typeof p.lng==='number'&&p.lat>18&&p.lat<54&&p.lng>73&&p.lng<135&&p.info;}
+function showKeyBox(){document.getElementById('aiKeyBox').style.display='block';}
+function saveKey(){
+ var v=document.getElementById('aiKeyIn').value.trim();
+ if(!v)return;
+ dsKey=v;save('cj-ds-key',v);
+ document.getElementById('aiKeyBox').style.display='none';
+ aiScan(false);
+}
+function aiScan(force){
+ var st=document.getElementById('radarStatus');
+ if(!state.me){st.textContent='先定位,再做 AI 扫描。';return;}
+ if(!dsKey){showKeyBox();st.textContent='首次使用请先粘贴 DeepSeek API Key(见下方输入框)。';return;}
+ var gid=gridId(state.me);
+ if(aiPacks[gid]&&!force){st.innerHTML='本区域已扫描('+aiPacks[gid].pts.length+' 点) · <a style="color:var(--teal);cursor:pointer;text-decoration:underline" onclick="aiScan(true)">重新扫描</a>';return;}
+ st.textContent='AI 正在扫描周围 100 公里(约 10–20 秒)…';
+ var body={
+  temperature:0.3,response_format:{type:'json_object'},
+  messages:[
+   {role:'system',content:'你是亲子旅行文史向导。只输出 JSON,不要任何额外文字。'},
+   {role:'user',content:'以经纬度('+state.me.lat.toFixed(4)+','+state.me.lng.toFixed(4)+')为圆心、半径100公里范围内,列出20个真实存在、可公开查证的参观点。类别限:文(文学诗词相关)、史(历史古迹/博物馆)、地(自然地理/地质)、科(科学工程/科技场馆)。要求:必须真实存在,不要编造;坐标给 WGS-84 估算值;info 用适合 11 岁孩子的口吻写 2-3 句,先讲是什么、再讲为什么有意思;q 给一个开放式启发问题。输出 JSON 对象,格式:{"points":[{"name":"...","cat":"文|史|地|科","lat":30.12,"lng":114.56,"info":"...","q":"..."}]}'}
+  ]
+ };
+ var tryModel=function(idx){
+  body.model=['deepseek-v4-flash','deepseek-chat'][idx];
+  return fetch('https://api.deepseek.com/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+dsKey},body:JSON.stringify(body)})
+  .then(function(r){if(!r.ok){if(idx===0&&r.status===400)return tryModel(1);throw new Error('HTTP '+r.status);}return r.json();});
+ };
+ tryModel(0)
+ .then(function(j){
+  var txt=j.choices&&j.choices[0]&&j.choices[0].message&&j.choices[0].message.content;
+  var obj=JSON.parse(txt);
+  var pts=(obj.points||[]).filter(validAiPt).slice(0,20);
+  if(!pts.length)throw new Error('返回为空');
+  aiPacks[gid]={t:Date.now(),pts:pts};
+  save('cj-ai-packs',aiPacks);
+  runRadar();
+  st.innerHTML='AI 扫描完成:本区域新增 '+pts.length+' 个点(带“AI”标记,位置为估算) · <a style="color:var(--teal);cursor:pointer;text-decoration:underline" onclick="aiScan(true)">重新扫描</a>';
+ })
+ .catch(function(e){
+  st.textContent='AI 扫描失败('+(e.message||'网络或密钥问题')+')。精选库不受影响,可正常使用。';
+ });
+}
+
+/* ============ 点开讲透 ============ */
+var POI_DETAIL={"东坡赤壁(黄州)":{"story":"苏轼被贬到黄州，心情不好，有一天来到赤壁，觉得这里就是三国打仗的地方，就写下了著名的《念奴娇·赤壁怀古》。","see":["看那块写着‘赤壁’的红色大字","找找苏轼写的《赤壁赋》刻在哪里","看看江边是不是真的像词里说的‘乱石穿空’"],"fact":"其实真正的古战场赤壁在湖北咸宁，苏轼搞错了地方，但他写的词太有名了，这里就被叫成了‘文赤壁’。","think":"如果你在黄州赤壁，能想象出苏轼当时看到的江景吗？和现在有什么不同？"},"湖北省博物馆":{"story":"曾侯乙编钟出土时还挂着架子，像两千多年前的乐团刚演完。越王勾践剑拔出来还闪着寒光，有人说它“睡觉”了2500年还没生锈。","see":["看曾侯乙编钟的钟架怎么立住的，上面还有彩绘花纹","看越王勾践剑上的菱形暗纹，猜猜古人怎么做出来的","看云梦秦简上的小字，那是秦朝法律原文"],"fact":"编钟每口钟能敲出两个音，因为工匠把钟壁磨成了不同的厚度。","think":"如果穿越回战国，你能用编钟弹一首《小星星》给曾侯乙听吗？他会是什么反应？"},"大别山(G42穿行段)":{"story":"1947年，刘邓大军千里跃进大别山，像一把尖刀插进敌人心脏，拉开了全国反攻的序幕。","see":["看G42从平原到山区的地貌渐变","看大别山连绵的绿色山脊和峡谷","看路边标牌上的“千里跃进”历史纪念"],"fact":"大别山名字来自古代，传说山里有座“大别庙”，寓意“大别于此，前程万里”。","think":"为什么刘邓大军要选择大别山作为反攻的起点？"},"黄鹤楼":{"story":"黄鹤楼最早是三国孙权建的瞭望台，后来文人爱来此写诗。崔颢写下名诗后，李白都不敢再题，还因此给武汉起了‘江城’这个名字。","see":["看楼顶的‘黄鹤楼’匾额和飞檐翘角，像一只展翅的黄鹤","找崔颢的《黄鹤楼》诗碑，读一读‘昔人已乘黄鹤去’","到毛泽东词碑亭，读‘烟雨莽苍苍，龟蛇锁大江’，感受大江气势"],"fact":"黄鹤楼名字可能来自建楼的黄鹤矶，传说曾有仙人骑黄鹤在此停留。","think":"如果李白和崔颢同时出现在黄鹤楼，你觉得他们谁会先开口说话？为什么？"},"昭君故里(兴山)":{"story":"王昭君是兴山人，西汉时远嫁匈奴，换来边境和平。杜甫写诗夸她：'一去紫台连朔漠，独留青冢向黄昏'。","see":["看仿汉古建的昭君宅","看汉白玉昭君雕像","看院中栽种的香溪桃树"],"fact":"昭君出塞时带去了中原的农作物种子和纺织技术。","think":"如果你是王昭君，愿意离开家乡去陌生远方吗？"},"晴川阁":{"story":"崔颢写“晴川历历汉阳树”时还没晴川阁，明朝人为纪念他才建了它。传说大禹在这里疏导汉水，所以旁边有禹稷行宫。","see":["站在晴川阁看对岸黄鹤楼，想象崔颢李白隔江相望的场景。","看禹稷行宫里的大禹像，他手持治水工具“耒”的样子很威风。","找阁楼上“晴川阁”匾额，是赵朴初写的，字很圆润。"],"fact":"晴川阁重建过好几次，最近一次是1985年，之前的老阁在战争中被烧毁了。","think":"如果让你在晴川阁和黄鹤楼之间造一座桥，怎样设计才不破坏两岸的风景？"},"白帝城·瞿塘峡":{"story":"西汉末年公孙述自称白帝，三国刘备托孤诸葛亮，李白遇赦写《早发白帝城》，刘禹锡学民歌作《竹枝词》。","see":["看白帝庙里刘备托孤的彩塑群像。","看瞿塘峡入口夔门，和10元人民币背面对比。","看夔门两岸陡峭山壁，感受8公里最险峡江。"],"fact":"刘禹锡《竹枝词》里的“东边日出西边雨”是描写当地晴雨无常的天气。","think":"如果刘备托孤时诸葛亮拒绝辅佐阿斗，三国历史会怎样改变？"},"云阳张飞庙":{"story":"张飞被杀害后，头和身体被分葬两地：头在云阳，身在阆中。云阳的这座庙是为纪念他而建，原来在江边，后来三峡蓄水时整个搬到了现在的位置。","see":["看庙里张飞塑像的威武样子，注意他瞪着眼、手持蛇矛","看庙墙上刻着的古诗词和石碑，是历代文人留下的","看庙的新位置和背后的长江，想想整座庙是怎么挪过来的"],"fact":"张飞庙搬迁时，每一块砖瓦都编号记录，总共用了1万多块木料，2万多块瓦，在30多公里外重新组装。","think":"如果张飞还活着，看到自己的庙被整个搬走，他会不会气得吹胡子瞪眼？"},"白公馆·渣滓洞":{"story":"这里是小说《红岩》里关押革命者的地方。8个月大的小萝卜头被关进监狱，8岁牺牲，是最小的烈士。江姐等200多人在这里被杀害，牺牲前还偷偷绣了面红旗。","see":["看小萝卜头住过的牢房，只有几平米","看江姐受刑的刑具，想想她的坚强","看那面狱中绣的红旗，针脚很乱但很珍贵"],"fact":"小萝卜头在狱中学会了俄语，因为看守听不懂，他常常用俄语和战友传递情报。","think":"如果你是小萝卜头，在狱中你会用什么方法学习或传递消息？"},"荆州古城":{"story":"刘备借荆州当根据地，关羽却因大意丢了城。这些故事就发生在这座古城里。","see":["看城墙砖上刻的‘荆州’二字，有些是明朝烧的。","看古城门和瓮城，想象古代士兵怎么防守。","站在城北，远看高速公路旁连绵的城墙轮廓。"],"fact":"荆州城墙的砖上刻有不同朝代的年号，比如‘大明万历’。","think":"如果你能穿越回三国，你会用什么办法帮关羽守住荆州？"},"重庆中国三峡博物馆":{"story":"乌杨阙是汉代立在墓前的石阙，像门牌一样。它在全国保存得最完整，上面刻着神话故事，你能找到西王母吗？","see":["乌杨阙上的凤凰、九尾狐等神兽雕刻","'巫山人'下颌骨化石，距今约200万年","三峡淹没区文物展中的巴人青铜器"],"fact":"乌杨阙原本在重庆忠县，因修建三峡水库被整体搬迁到博物馆，一块石头都没少。","think":"如果把乌杨阙留在原址被水淹没，和搬到博物馆保存，哪种方式更好？为什么？"},"解放碑(抗战胜利纪功碑)":{"story":"1947年建成的这座碑，是中国唯一纪念抗战胜利的纪念碑。它标记着重庆的城市中心，当年人们在这里欢呼胜利。","see":["看碑顶的大钟，它曾是重庆最高的钟。","看碑身刻的“抗战胜利纪功碑”七个大字。","看基座上的浮雕，记录了抗战时的英雄故事。"],"fact":"这座碑原名“抗战胜利纪功碑”，1950年才改称解放碑。","think":"为什么抗战胜利后要在重庆建这座碑，而不是其他地方？"},"杜甫草堂":{"story":"杜甫为躲避战乱来到成都，在浣花溪边搭了个茅草屋，一住近四年，写了好多诗，比如《绝句》里‘两个黄鹂鸣翠柳’说的就是这儿。","see":["去茅草屋看诗人住过的卧室和书房","找找园子里的黄四娘家花径","看看石碑上刻的《茅屋为秋风所破歌》"],"fact":"杜甫草堂是中国唯一保存至今的唐代诗人故居，但现在的样子是后人重建的，原址早被风吹没了。","think":"如果杜甫没住过草堂，他还会写出那么多关于成都的诗吗？"},"成都博物馆":{"story":"成都博物馆里藏着一座3000年前的古城——宝墩古城，那时的人用树枝和泥土建房子，比秦始皇还早两千年。","see":["看战国船棺：用整棵大木挖成的船形棺材，里面放着宝剑和陶罐","看汉代说唱俑：一个胖胖的小人儿左手抱鼓、右手举槌，咧嘴笑得像个喜剧演员","看天府广场模型：脚下就是成都中心，左边是摩天楼，右边藏着古河道"],"fact":"说唱俑出土时肚子是空的，古人用它装酒，边喝边唱。","think":"如果让你给3000年后的人留一件东西放在博物馆里，你会选什么？为什么？"},"湖广会馆":{"story":"明末四川人太少，皇帝下令让湖广的人搬过来。这座会馆就是移民们聚会、商量大事的地方。","see":["黄墙紧贴山坡，和东水门大桥同框，像古今对话。","看壁画上的移民故事：挑担、推车，一路走来多不容易。","会馆戏台：以前移民在这里看戏、听乡音，缓解思乡。"],"fact":"很多重庆人家里族谱第一页就写着‘湖广填四川’，说明祖先是从外地迁来的。","think":"如果你要移民去个陌生地方，只能带三样东西，你会带什么？为什么？"},"大足石刻(宝顶山)":{"story":"南宋赵智凤用70多年把佛经故事刻成石头连环画，就像立体的古代漫画书。","see":["看千手观音，数一数是不是真的有1007只手","看31米半身卧佛，猜猜为什么只刻半身","看《父母恩重经变相》十组雕像讲孝顺故事"],"fact":"千手观音其实有1007只手，多出的7只代表护法神。","think":"如果让你把妈妈对你好的一件事刻成石头画，你会选哪个场景？"},"武侯祠":{"story":"这是中国唯一的君臣合祀祠庙，刘备和诸葛亮葬在一起。旁边就是刘备的惠陵。杜甫写《蜀相》说的就是这里，诸葛亮在《出师表》里说‘鞠躬尽瘁，死而后已’。","see":["看‘三绝碑’，唐代宰相裴度写文章、柳公权哥哥柳公绰写的字","看刘备殿和诸葛亮殿，君臣同庙但位置不同","看惠陵，刘备的墓，就在祠庙旁边"],"fact":"武侯祠里‘三绝碑’的第三绝是刻工鲁建，他的雕刻技术让碑文更珍贵。","think":"如果穿越到三国，你会选择当刘备还是诸葛亮？为什么？"},"望江楼公园":{"story":"唐代女诗人薛涛住在这里，她写了500多首诗，还发明了特别的红色小信纸叫“薛涛笺”，连大诗人元稹、白居易都和她一起写诗。","see":["园子里有150多种竹子，找找看哪种最特别","崇丽阁，成都老地标，爬上去能望见锦江","薛涛井，传说她就是用这口井的水做彩笺"],"fact":"薛涛笺只有手掌大小，专门用来写短诗，当时文人抢着用。","think":"薛涛为什么要把信纸做成红色？如果是你，会设计什么样的信纸？"},"金沙遗址":{"story":"三千年前，古蜀人在这里建都，留下太阳神鸟金饰、黄金面具和成吨象牙，说明当时贸易很发达。","see":["太阳神鸟金饰：薄如纸的24K金箔，四只鸟绕太阳飞，是中国文化遗产标志。","黄金面具：跟三星堆面具很像，古蜀人用黄金做面具，可能用于祭祀。","遗迹馆：直接建在考古坑上，能看到几千年前的象牙和祭祀坑原样。"],"fact":"太阳神鸟金饰仅0.02厘米厚，比一张纸还薄，古人竟能锤打出这么精细的图案。","think":"古蜀人为什么要把成吨的象牙埋到地下？这些象牙又是从哪里运来的？"},"青城山":{"story":"青城山是道教创始人张陵传道的地方，传说白素贞就在这里修炼成精，86版《西游记》也在这里拍过人参果的戏。","see":["天师洞前那棵千年银杏，树干粗到好几个人都抱不住","上清宫附近找找《西游记》里五庄观的石台阶","山路上听溪水声，看密林把天空遮成绿色"],"fact":"青城山名字里的“青”不是绿色，而是因为古人认为这座山是神仙居住的“清都”之地。","think":"如果让你给孙悟空设计一个躲在青城山的新故事，你会让他遇到谁？"},"巫山·巫峡":{"story":"神女瑶姬帮大禹治水后化为神女峰。楚王梦中相遇，留下“巫山云雨”典故。元稹“除却巫山不是云”赞美此景。","see":["看神女峰像一位少女立在江边，云雾就是她的纱巾","看云雾从山腰升起，让十二峰若隐若现","看G42高速路从山肚子里穿出来，像巨龙钻洞"],"fact":"巫山十二峰名字都来自宋玉辞赋，比如‘朝云’‘暮雨’‘聚鹤’等。","think":"你觉得元稹说的‘云’真的只是天上的云吗？他在比喻什么？"},"都江堰":{"story":"两千多年前，李冰父子用竹笼、石头修了都江堰，不用大坝就能引水，到现在还在用。成都平原因此变成天府之国。","see":["鱼嘴：站在这里看江水分流，四成水进内江，六成水走外江。","飞沙堰：观察洪水时泥沙怎么被甩到外江，保护内江不淤塞。","宝瓶口：看看这个人工开凿的瓶口，它像阀门一样控制进水量。"],"fact":"二王庙墙上刻着‘深淘滩、低作堰’，庙前埋的铁柱子叫卧铁，每年清淤要挖到它才算合格。","think":"如果都江堰突然不能用了，成都平原的农田会有什么变化？"},"平武报恩寺":{"story":"明朝一个叫王玺的土司为报皇恩，花了20年建了这座全楠木宫殿群，格局模仿北京故宫，所以叫“深山故宫”。","see":["看大殿的楠木柱子，全用榫卯拼接，没一根铁钉","去华严殿推转轮经藏，它像个大书架，据说转一圈等于念一遍经","抬头看屋檐下密密麻麻的斗拱，像拼积木一样层层叠叠"],"fact":"转轮经藏其实是藏经书的旋转书架，转一圈等于诵读全部经文。","think":"为什么王玺要把自己的土司府修得像皇帝住的皇宫？你觉得他当时心里是怎么想的？"},"李白故里(江油青莲镇)":{"story":"李白5岁到25岁都住在这儿，他最早的诗就是在这里写的。后来出川时，他写了《峨眉山月歌》想念家乡。","see":["看看李白小时候住的院子，想象他在这儿读书写字的样子。","磨针溪边，传说李白被老奶奶磨铁杵感动，从此用功学习。","太白碑林里刻着很多李白的诗，找找《静夜思》在哪。"],"fact":"李白没有参加科举考试，因为他的诗写得太有名，直接被皇帝请进宫里。","think":"如果李白有手机，他会怎么发朋友圈记录旅行？"},"三苏祠(眉山)":{"story":"苏洵带着两个儿子苏轼、苏辙从这里出发，后来三人都成了大文豪，唐宋八大家他们家就占了三个。","see":["看苏轼手植的荔枝树，听说他离家后还惦记着这棵树","看古井，据说苏轼小时候在这里打水","看刻着《水调歌头》的石碑，找找‘但愿人长久’那行字"],"fact":"苏轼的老家其实在河北，三苏是后来搬到眉山的。","think":"如果你穿越回宋朝，见到小时候的苏轼，你会跟他玩什么游戏呢？"},"九寨沟":{"story":"九寨沟名字来自九个藏族寨子，湖水颜色是矿物质和阳光的魔法。2017年地震后花了四年修复，大自然真的很坚强。","see":["五花海看一湖五色的水","诺日朗瀑布找86版西游记片尾的影子","五彩池摸一摸钙华沉淀的石头"],"fact":"九寨沟的湖水冬天会结冰，但冰下水流依然哗哗响，像地下有个秘密世界。","think":"如果地震再来一次，你觉得九寨沟的湖水和瀑布还会变回原来的样子吗？为什么？"},"乐山大佛":{"story":"唐代海通和尚为镇住三江汇流的水患，发起开凿大佛，历时90年、三代人才完成。为保护善款，他曾自挖双目明志。","see":["坐船远观大佛全景，体验‘山是一尊佛，佛是一座山’。","近看大佛的手和脚，手指有8米长，脚背可坐百人。","观察大佛两侧的九曲栈道，想象古人如何凿山。"],"fact":"大佛的耳朵用木料做成，耳朵眼里可以并排站两个人。","think":"古人为什么不直接修堤坝，而要花90年时间刻一座大佛来镇水患？"},"三星堆":{"story":"三千多年前古蜀国神秘消失，直到1929年被发现。李白诗里“蚕丛及鱼凫”说的就是这里。","see":["青铜大立人：2.62米高，可能是古蜀国的国王雕像。","青铜神树：近4米高，有人说它很像《山海经》里的扶桑树。","纵目面具：眼球凸出16厘米，戴着它就像有了“千里眼”。"],"fact":"青铜神树上有9只鸟，对应《山海经》里扶桑树上的10个太阳——9只在树上，1只在天上。","think":"如果古蜀人真的见过《山海经》里的神树，你觉得他们是自己编的故事，还是真的见过外星人？"},"海螺沟(冰川森林公园)":{"story":"很久以前，冰川像一条大河慢慢流进森林，在贡嘎山下形成了海螺沟。这里海拔很低，却藏着全世界离城市最近的现代冰川。","see":["坐索道看大冰瀑布，像一堵巨大的冰墙挂在眼前。","在四号营地远眺贡嘎主峰，山顶积雪白得发亮。","摸一摸原始森林里的冰川，冰舌居然和树木长在一起。"],"fact":"海螺沟的冰川最低处只有2850米，比很多滑雪场还低，是地球上最低的冰川之一。","think":"如果冰川继续融化，森林里的动物会失去什么？"},"峨眉山(报国寺)":{"story":"李白25岁出蜀时，在峨眉山下看到半轮秋月，写下了《峨眉山月歌》。报国寺是进山第一寺，明代建，原名会宗堂，后来才改成报国寺。","see":["看寺门上的康熙御笔‘报国寺’匾额，字体很端正","看寺内大雄宝殿的佛像，还有普贤菩萨像","看寺前的古树和放生池，环境清幽"],"fact":"报国寺原来叫‘会宗堂’，是儒释道三教合一的寺庙，直到清代才改名。","think":"为什么寺庙要起名叫‘报国寺’？你觉得是报谁的国呢？"},"四姑娘山(双桥沟)":{"story":"四姑娘山是四座雪峰并排，幺妹峰最高，像四个姐妹。双桥沟最容易玩，坐观光车就能看雪山草地。","see":["坐观光车到红杉林，雪山就在眼前","沟里草甸像地毯，还能玩漂流","熊猫大道穿行，运气好能见熊猫"],"fact":"四姑娘山是邛崃山脉最高峰，比欧洲阿尔卑斯山主峰还高。","think":"为什么海拔高了人会头疼？"},"葛洲坝":{"story":"葛洲坝是长江上的第一座大坝，1988年建成，它就像三峡工程的小弟弟，帮忙试了试水。","see":["看大坝如何把长江分成几段，船怎么通过船闸","看泄洪时水流奔腾，像瀑布一样壮观","看桥上的车流和大坝并排，感受人类工程的巨大"],"fact":"葛洲坝建成前，长江上游洪水常淹到宜昌城区，现在大坝能拦住一部分洪水。","think":"如果长江没有大坝，你认为宜昌的码头和航运会有什么不同？"},"磨西古镇":{"story":"磨西古镇是茶马古道上的驿站，马帮曾在此装卸货物。1935年红军长征到此，毛泽东住进天主教堂并召开磨西会议，为飞夺泸定桥做了准备。","see":["天主教堂内毛泽东住过的房间和小会议室","红军长征陈列馆里的马灯和手稿","古镇老街上的茶马古道雕塑群"],"fact":"磨西会议是红军唯一一次在教堂里开的正式会议。","think":"如果当时磨西会议决定不过泸定桥，长征路线会怎么变？"},"泸定桥":{"story":"1935年红军长征，22名勇士冒着枪林弹雨，攀爬13根铁索，夺下泸定桥，打开了北上通道。","see":["看铁索：每根碗口粗的铁链，由900多个铁环连成，重达好几吨。","看桥板：桥面上木板间距很大，脚能直接看到下面汹涌的大渡河。","看东桥头：那里还留着当年敌人拆掉木板的痕迹和机枪射击孔。"],"fact":"建造泸定桥用了生铁40多万斤，每个铁环上都铸有工匠的记号，确保质量。","think":"如果当时你是红军指挥员，面对只剩铁索的桥和敌人的机枪，你会怎么选渡河方案？"},"三游洞":{"story":"唐朝时，白居易、白行简和元稹发现了这个山洞，一起写诗留念。过了两百多年，宋朝的苏洵、苏轼、苏辙父子三人也来游玩题诗。一个洞里装下了两代文豪的足迹。","see":["看洞壁上白居易他们留下的《三游洞序》石刻","看洞口外西陵峡的江水和险峻山崖","找找近代名人如冯玉祥、张艺谋留下的题刻"],"fact":"白居易命名“三游洞”后，苏家父子又来了，所以人们把这两拨人分别叫做“前三游”和“后三游”。","think":"如果你是古代的文豪，来到这个山洞，你觉得最想写一首什么样的诗？"},"合肥":{"story":"包拯是北宋著名清官，人称包青天，他铁面无私，铡美案、打龙袍等故事流传至今。合肥是他的家乡，有包公园纪念他。","see":["包公祠里看包拯蜡像和龙头铡","清风阁登高看合肥全景","逍遥津公园找张辽威震逍遥津的雕像"],"fact":"包拯在60岁时才被任命为开封府尹，只干了一年多，但名气最大。","think":"如果你当包公，断案是看证据还是听感觉？为什么？"},"屈原故里(秭归)":{"story":"屈原是古代爱国诗人，写《离骚》和《橘颂》。他投江后，百姓划船投粽纪念，后来就有了端午节。秭归种了很多橘树，和《橘颂》里写的一样。","see":["屈原祠，看雕像和《离骚》刻字","站在祠前，正面遥望三峡大坝","橘颂园，闻着橘香读诗"],"fact":"秭归县名来自屈原的姐姐，她曾回来探望，所以叫“秭归”（姊归）。","think":"如果屈原看到三峡大坝，你觉得他会为它写一首什么样的诗？"},"三峡大坝(坛子岭)":{"story":"毛泽东曾写下'高峡出平湖'的诗句，当时人们觉得是幻想。如今三峡大坝让梦想成真，百万移民为此搬离家乡。","see":["站在坛子岭俯瞰大坝，像一条巨龙横跨长江，坝长2309米比30个足球场还长。","看双线五级船闸：大船像爬楼梯一样一级级上升，过闸要花3小时。","看升船机：小船坐'电梯'，113米高像40层楼，只需40分钟通过。"],"fact":"三峡大坝有32台70万千瓦发电机组，一天发的电够一个家庭用1000年。","think":"如果让你设计一个更快的过坝方式，你会怎么让船既不爬楼梯也不坐电梯？"},"麻城(鄂豫皖交界)":{"story":"你知道吗？很多四川人的祖先是从麻城出发去四川的。明朝“湖广填四川”时，成千上万的人背着行囊从这里走向四川，所以四川很多族谱第一页写着麻城孝感乡。","see":["龟峰山满山遍野的杜鹃花，四月时红遍山坡。","孝感乡移民遗址，想象当年移民出发的场景。","麻城古街或移民博物馆，看看老照片和族谱。"],"fact":"麻城孝感乡是一个历史地名，具体位置至今有争议，但它是许多四川人寻根问祖的圣地。","think":"如果你是当年移民的后代，现在回到麻城，你最想找到什么？是祖上的老房子，还是族谱上的名字？"},"南京":{"story":"南京是六朝古都，从东吴到明朝初年，很多皇帝选这里。所以南京的石头里藏着好多历史故事。","see":["看明孝陵神道上的石像，它们已经守了600多年。","爬中山陵的392级台阶，回头看风景很特别。","站在中华门城堡上，数数城墙上的藏兵洞有多少个。"],"fact":"南京明城墙的每块砖上都刻着烧砖人的名字，谁负责的都能查到。","think":"为什么这么多朝代都选南京做首都？你觉得南京有什么特别的地方吸引了他们？"},"秦淮河·乌衣巷(南京)":{"story":"刘禹锡写诗感叹：从前王导、谢安这些大户人家的燕子，现在飞进了普通百姓家。这条巷子就是当年他们住的地方。","see":["看巷口碑上刻的《乌衣巷》诗句","找找屋檐下有没有燕子窝","看青砖路和两边老房子"],"fact":"乌衣巷名字来源：东吴时这里驻扎的士兵穿黑衣，所以叫乌衣巷。","think":"如果王导和谢安穿越到今天，看到这里变成旅游景点，他们会想些什么？"},"中华门瓮城(南京)":{"story":"明朝朱元璋下令建造中华门，它是世界最大的古城门。设计成三道瓮城四道门，敌人一进来，门一关，就像进了大口袋，所以叫“瓮中捉鳖”。","see":["三道瓮城，看看敌人怎么被包饺子","藏兵洞，想象三千士兵埋伏在里面","千斤闸的槽痕，以前门可以快速落下"],"fact":"中华门原名聚宝门，传说朱元璋在门下埋了聚宝盆来镇风水。","think":"如果你是守城将军，会怎样用藏兵洞和瓮城来打败敌人？"},"南京博物院":{"story":"南京博物院是中国最早创建的博物馆之一，收藏了从远古到近现代的珍贵文物。它的前身是1933年蔡元培先生倡议设立的国立中央博物院。","see":["金缕玉衣：用2000多片玉和金银线编成的汉代皇帝殓服，像一件玉石盔甲。","竹林七贤砖画：南朝砖画，画了嵇康、阮籍等七位名士在竹林里喝酒弹琴。","大报恩寺琉璃塔拱门：明代彩色琉璃构件，原塔曾被称为“天下第一塔”。"],"fact":"金缕玉衣的玉片之间用金丝连接，每根金丝只有0.5毫米粗，比头发丝还细。","think":"如果你能穿越回汉代，你想用金缕玉衣做什么？是保存自己还是送给皇帝？"},"惠山古镇·天下第二泉(无锡)":{"story":"唐代茶圣陆羽喝遍天下泉水，评出第二泉就在这里。盲人音乐家阿炳常来拉琴，写下了名曲《二泉映月》。","see":["看泉池上方的“天下第二泉”石刻，是清代书法家写的","看池底冒出的气泡，像珍珠一样，那是地下水在涌出","看旁边的阿炳雕像，他正坐在泉边拉二胡"],"fact":"这口泉的水质很轻，泡茶不会掩盖茶香，所以古代茶客都爱用它泡茶。","think":"如果你能穿越回阿炳的年代，你会对他说什么，让他把曲子改得更有趣一些？"},"包公园(合肥)":{"story":"包拯是北宋有名的清官，铁面无私，连皇亲国戚都敢审，老百姓都叫他‘包青天’。这个公园就是为纪念他建的。","see":["看包公祠里包拯的塑像和他的三口铡刀，分别是龙头、虎头、狗头铡刀。","看廉泉古井，据说贪官喝了会头疼，清官喝了没事。","看清风阁顶楼，能俯瞰整个包公园和合肥城。"],"fact":"包拯其实脸不黑，戏文里黑脸是表现他铁面无私，真实长相和普通人差不多。","think":"为什么包拯能流传千年，而其他清官我们却很少听说？"},"东林书院(无锡)":{"story":"明朝东林学者顾宪成创办了这座书院，他写下那副著名对联，鼓励学生边读书边关心天下大事。","see":["看依庸堂里悬挂的对联真迹","看古代讲堂的桌椅和讲台布局","看书院庭院里的百年古树和碑刻"],"fact":"东林书院曾因得罪皇帝被下令拆毁，直到清朝才重建。","think":"如果现在学校里也挂上那副对联，你会觉得每天读书和关心新闻哪个更重要？"},"逍遥津公园(合肥)":{"story":"三国时，张辽只带八百人冲进孙权十万大军，杀得吴军大败。从此小孩听到张辽名字都不敢哭，叫“张辽止啼”。","see":["张辽墓：看这位猛将长眠的地方","逍遥湖：当年战场如今变湖水","飞骑桥：传说张辽骑马飞越的桥"],"fact":"张辽止啼出自《三国志》，当时江东小孩哭闹，大人说“张辽来了”，小孩立刻不哭。","think":"如果你是指挥官，只有八百人，怎么打十万大军才能赢？"},"梅山水库(金寨)":{"story":"在1950年代，新中国刚成立不久，工人们就靠双手和简单工具，在史河上建起了这座连拱坝，到现在还在发电防洪呢。","see":["看大坝像一串巨大的拱形积木，每块都连在一起，非常壮观。","看坝顶的泄洪孔，如果汛期放水，水流像瀑布一样冲下来。","看库区水面，平静得像一面镜子，远处山影倒映在水中。"],"fact":"梅山水库的大坝有16个拱，是当时世界最高的连拱坝之一，但设计全是中国工程师完成的。","think":"如果你是大坝的设计师，你会怎么确保这些弧形拱能承受住水的巨大压力呢？"},"三河古镇(合肥)":{"story":"太平天国陈玉成在三河打了一场大胜仗，以少胜多击败湘军，保住了天京。杨振宁小时候曾住在这里，后来得了诺贝尔奖。","see":["望月阁上看古镇全貌，五层木楼很壮观","挤一挤一人巷，感受古代小巷的窄","杨振宁旧居看他的桌椅，想他小时候怎么学习"],"fact":"三河镇因三条河汇合得名，曾经是巢湖上的繁华码头。","think":"如果你是太平军将领，你会选三河这样的水乡打防御战吗？为什么？"},"天堂寨(大别山)":{"story":"天堂寨古称'多云山'，南宋时抗元义军在此建寨防守，因地势险要而得名，一脚跨两省。","see":["站在山顶，一脚踩湖北一脚踩安徽，看看两省风景有什么不同","瀑布群从山顶飞流直下，夏天水花溅到身上凉丝丝的，像开了空调","找找瀑布旁边的彩虹，阳光透过水雾会变出七彩光"],"fact":"天堂寨的瀑布群是华东地区最大的，有大小瀑布108条，比庐山瀑布还多。","think":"山顶的瀑布水不停流，这些水是从哪里来的？和山上的森林、雨水有什么关系？"},"安徽省博物院(合肥)":{"story":"战国时安徽是楚国后期都城，这里的楚文物和湖北的就像亲兄弟，合起来能看到完整的楚文化。","see":["徽派建筑'四水归堂'的天井，雨水都流进自家院子","楚大鼎（铸客大鼎），又大又重，比人还高","楚国金币'郢爰'，中国最早的黄金货币"],"fact":"楚大鼎有400公斤重，古人没机器怎么造出来的？目前还是个谜。","think":"为什么徽派房子要把雨水收集到院内？换成你会怎么设计屋顶？"},"金寨红军广场":{"story":"金寨10万儿女参加革命，大多牺牲，幸存者中出了59位开国将军，所以叫将军县。","see":["看红军纪念塔，像一把利剑，象征革命精神。","看将军墙，刻着59位将军的名字。","看红军墓，许多无名烈士长眠在此。"],"fact":"金寨10万人参加红军，建国时仅剩700多人，59人成了将军。","think":"如果你回到那个年代，你会选择当红军吗？为什么？"},"东湖(武汉)":{"story":"东湖原来和长江连着，后来被泥沙隔开，成了中国最大的城中湖。毛主席特别爱来这里，一生住了48次，比西湖还多。","see":["看湖面像海一样宽，比西湖大六倍","看湖边的绿道，能骑车或散步","看毛主席曾住过的梅岭一号"],"fact":"东湖是亚洲最大的城中湖，面积有33个故宫那么大。","think":"如果东湖和西湖换一下位置，你觉得杭州的西湖会变成什么样？"},"盘龙城遗址(武汉)":{"story":"3500年前，商朝人在此建城，是武汉最早的'城市之根'，比武汉这个名字早两千多年。","see":["看城墙遗迹——用土一层层夯起来的，现在还看得出轮廓","看宫殿基址——地上有好多大洞，是当年撑房梁的柱子坑","看青铜器展——出土的鼎和钺，说明那时就能造高级青铜器了"],"fact":"盘龙城比安阳殷墟早几百年，是长江流域最早的商代古城。","think":"假如你只用木棍和石头，怎么把松散的土夯成结实的城墙？试着想两种方法。"},"湖北省科技馆(武汉)":{"story":"科技馆里有个特别大的‘天宫’空间站模型，你可以钻进去看宇航员怎么睡觉、吃饭。旁边的机器人会下棋，还能跟你比赛谁拼图快。","see":["看看‘天宫’空间站内部，体验宇航员在太空的微重力生活。","找找会下棋的机器人，和它下一盘五子棋。","玩玩生态展区的‘垃圾分类’互动游戏，看看你分得对吗？"],"fact":"中国空间站里的‘天和’核心舱有50立方米，相当于一个房间大小，但宇航员要在里面住半年。","think":"如果让你设计一个能在太空种菜的装置，你觉得要用什么方法让植物在没有阳光和重力的地方长大？"},"辛亥革命博物院(红楼,武汉)":{"story":"这里原是清朝湖北省咨议局大楼，1911年武昌起义成功后，革命军在这里建立了中华民国军政府。课本里的辛亥革命，就从这栋红楼开始。","see":["红楼的红墙红瓦，是西式建筑风格，和周围中式房子不一样","军政府会议室，里面有桌子椅子，当年革命党人就在这里开会","孙中山先生的画像和介绍，他是中华民国临时大总统"],"fact":"红楼门口的铁血十八星旗，代表长城以南的18个省份，寓意全国统一。","think":"如果你是武昌起义的领导人，你会选择在哪个城市成立军政府？为什么？"},"荆州博物馆":{"story":"在荆州博物馆里，一具西汉男尸躺了两千多年还没烂，比马王堆女尸还早几百年。旁边还有越王勾践的孙子用过的宝剑，闪闪发光。","see":["看西汉男尸，皮肤还有弹性，连头发都在。","看越王州勾剑，剑身上的菱形暗格花纹。","看楚国漆器，上面画的凤鸟和云纹像在飞。"],"fact":"这具男尸出土时，肚子里还有没消化完的甜瓜籽，说明他死前刚吃过瓜。","think":"如果你是那个西汉人，会给自己的陪葬品里放什么，让两千年后的人知道你的故事？"},"曹禺纪念馆(潜江)":{"story":"曹禺从小爱看戏，后来写了《雷雨》，让中国有了自己的话剧。他的故乡在潜江，这里建了纪念馆纪念他。","see":["看曹禺写《雷雨》时用的钢笔和原稿","看《雷雨》中周朴园家的客厅复原场景","看潜江花鼓戏的戏服和道具"],"fact":"曹禺原名万家宝，“曹禺”是他从自己姓氏“萬”拆分成草字头和“禺”变来的。","think":"如果让你给《雷雨》改个结局，你会让谁活下来？为什么？"},"巢湖·姥山岛":{"story":"巢湖是五大淡水湖之一，传说古时巢州沉陷成湖，焦姥救人化作姥山岛。岛上文峰塔是明代建的，古人登塔盼文运。","see":["登上文峰塔，看湖水波光，找对岸合肥的高楼。","岛西的古渔村，看老房子和晒网的渔民。","在湖岸栈道，看天晴时湖面像大海一样无边。"],"fact":"巢湖是唯一一个在省会城市旁边的五大淡水湖，合肥就在湖边。","think":"文峰塔为什么要建在湖心岛上？如果是你，会选湖边还是岛中？"},"关陵(当阳)":{"story":"关羽在湖北战败被杀后，孙权把他的头送给曹操，身子埋在当阳。所以当阳关陵是关羽的真身墓。","see":["看墓冢前的‘汉寿亭侯墓’碑","观察墓冢封土堆的形状与大小","找找看有没有传说中关羽的青龙偃月刀仿制品"],"fact":"关陵的墓冢是圆形的，而洛阳关林的头冢是方形的，象征天圆地方。","think":"如果关羽当年没走麦城，历史会有什么不同？"},"楚王车马阵(荆州)":{"story":"两千多年前的楚国国王，觉得自己死后还要乘车出行，就让人把真车真马埋进坑里，陪自己继续威风。","see":["看一排排整齐的车马坑，好像地下停车场；","看马车上的青铜车軎和缰绳装饰，很精致；","看马的骨骼和摆放姿势，能看出当年它们是怎么被放进去的。"],"fact":"有些马坑里的马是被活着埋进去的，因为考古发现它们腿骨弯曲、好像挣扎过。","think":"楚王为什么不用陶俑陪葬，而偏偏要杀掉这么多真车真马？和秦始皇的兵马俑比，哪个更用心？"},"长坂坡遗址公园(当阳)":{"story":"三国时，赵云在长坂坡大战中，单枪匹马冲进曹军，救出刘备的儿子阿斗，成了千古英雄。","see":["子龙塑像：看赵云骑马挥枪的英姿，感受他当年救主的勇气。","长坂坡古战场：想象当年千军万马混战的场景和赵云突围的路线。","碑林石刻：读一读历代文人留下的诗词，了解后人对赵云的赞美。"],"fact":"长坂坡之战其实不是赵云一个人的功劳，张飞在长坂桥断后，吼退曹兵，帮了大忙。","think":"如果当时赵云没有救出阿斗，三国历史会变成什么样？刘备还会建立蜀国吗？"},"明显陵(钟祥)":{"story":"明朝嘉靖皇帝为了追尊自己父母为皇帝皇后，把原本王爷坟改建成帝陵，就有了这座独一无二的双宝顶陵墓。","see":["一陵两冢：两个宝顶并排，代表皇帝和皇后","九百米神道：两旁石像生排列，非常壮观","新红门与旧红门：两座红门说明扩建过程"],"fact":"明显陵的神道在明代帝陵中最长，有近1300米，而且中间有弯曲和起伏。","think":"为什么嘉靖皇帝要给已经去世的父母重修一座帝陵，而不是直接让父亲葬在别处？"},"随州博物馆":{"story":"曾侯乙编钟在随州出土，但曾国历史更久远。这里收藏了更多曾国青铜器，能帮你搞清编钟是怎么来的，曾国又是怎样一个国家。","see":["看编钟实物复制品，注意大小不同的钟音高不同","看青铜器上的铭文，上面记录着曾国的大事","看墓葬复原场景，想象考古挖掘时的样子"],"fact":"曾侯乙编钟每件钟能发出两个不同的音，敲击正侧位置声音不一样，这叫一钟双音。","think":"如果你是古代工匠，要在青铜器上刻一句话传给后世，你会刻什么？"},"清江画廊(长阳)":{"story":"土家族人把清江叫做母亲河，传说他们的祖先就是从这条江里走出来的。","see":["看江水像翡翠一样绿，比长江清彻多了。","看两岸山峰倒映水中，像一幅水墨画。","看土家吊脚楼依山傍水，别有一番风味。"],"fact":"清江的源头在湖北利川，一路流了八百里，所以才叫“八百里清江”。","think":"为什么清江的水比长江清？想一想山的石头和河底沙子有什么不同。"},"三峡人家(宜昌)":{"story":"三峡大坝蓄水后，很多老三峡景观被淹了，但三峡人家还保留着以前的样子，能听到船工拉纤时喊的号子。","see":["看山崖上悬空的吊脚楼，下面用木桩撑着，像踩高跷的房子","看江边停的乌篷船，船头站着穿蓑衣的船工","听峡江号子表演，领号人喊一句，大家跟着吼，很带劲"],"fact":"这里的石头台阶原来就是船工拉纤踩出来的，现在还能看到绳子磨出的凹槽。","think":"如果你来这里生活，没有手机和外卖，怎么在吊脚楼里做饭、打水和上厕所？"},"三峡工程博物馆(宜昌坝区)":{"story":"三峡工程从孙中山时代就开始想了，论证了几十年才建。博物馆里能看到无数科学家和工人的心血。","see":["看巨大的三峡大坝模型，能清楚看到船闸和发电机位置","看早期论证时的照片和文件，了解为什么吵了几十年要不要建","看移民搬迁的互动区，体验他们怎么搬家"],"fact":"三峡大坝的船闸是世界上最大的，一次能通过万吨级船队。","think":"如果你是领导人，你会怎么说服百万移民离开家乡？"},"石宝寨(忠县)":{"story":"石宝寨是一座建在江边巨石上的木塔，古代工匠不用一颗铁钉，只用木头和榫卯搭了十二层楼。后来三峡大坝蓄水，它被围堰保护起来，变成了江中的一颗明珠。","see":["看塔身紧贴悬崖，每一层木头如何交错咬合，没有任何铁钉痕迹。","看围堰像个大碗把古建筑围住，对比江面和寨子的高度差。","看长江水在围堰外流动，感受这座塔像江上盆景的独特位置。"],"fact":"石宝寨原本建在玉印山上，蓄水后山脚被淹，围堰里抽干水后，塔基反而比江面低了几十米。","think":"如果三峡大坝一直没有修，石宝寨周围的环境会有什么不同？你觉得它还会像现在这样引人注目吗？"},"天生城(万州)":{"story":"南宋时，蒙古大军南下，万州人躲进天生城，靠着山势和石墙守了几十年，硬是没让敌人攻破。","see":["山顶的城墙遗址，看石头怎么垒成防线","窄窄的上山石阶，想想当年怎么运粮","站在瞭望台，看整个万州地形"],"fact":"天生城其实不是城，是座山，山顶挖平了当堡垒。","think":"如果你是守城将军，会用哪些方法让断粮的士兵坚持更久？"},"万州大瀑布":{"story":"万州大瀑布是长江支流上的瀑布，宽151米号称亚洲第一宽，比黄果树还宽，但落差没那么大。","see":["站在观景台感受151米的宽度，像一堵水墙铺开。","晴天时看水雾里的彩虹，有时还能看到双彩虹。","走近瀑布下方，看水流砸进深潭溅起白浪。"],"fact":"万州大瀑布的宽度是黄果树的1.5倍，但高度只有64米，黄果树有77.8米。","think":"瀑布的宽和高哪个更让你觉得震撼？如果让你设计一个瀑布，你会选哪种形状？"},"白鹤梁水下博物馆(涪陵)":{"story":"从唐代开始，古人在江中石梁上刻鱼记录水位，这个水下博物馆是世界最早的水文站。","see":["坐91米长的水下扶梯直达江底","看古代石鱼雕刻，它们曾是水位标尺","透过观察窗看长江水下的真实环境"],"fact":"白鹤梁的石鱼记录比欧洲最早的水文记录早了700多年。","think":"如果现在还用石刻记录水位，你觉得会有什么优缺点？"},"黄陵庙(宜昌三斗坪)":{"story":"传说大禹治水时路过这里，人们为纪念他建了这座庙。它已有千年历史，是三峡最老建筑之一。","see":["看庙里的大禹像，他手持工具仿佛在指挥治水。","看墙上的水文碑刻，古人把每年最高水位刻在石头上。","看庙内的木柱和斗拱，都是几百年前的原木结构。"],"fact":"黄陵庙的石碑上刻着800多年的水文记录，比现代水文站还早。","think":"如果你是大禹，你会用什么方法让后人记住洪水的高度？"},"816工程(涪陵)":{"story":"1966年，6万人在深山里秘密挖了17年，建成了这个巨大的地下核工厂，直到2002年才解密。","see":["抬头看洞顶，最高处有100多米，能装下十几层楼高的建筑。","走进9号导洞，看当年运材料的铁轨和通风管道，像科幻电影里的场景。","看核反应堆大厅，巨大的圆形空间里保留着当年的设备和仪表。"],"fact":"整个洞体有20多公里长，如果一个人从头走到尾，得走大半天。","think":"如果让你设计一个隐藏在山里的秘密基地，你会把哪些功能放在地下？"},"重庆自然博物馆(北碚)":{"story":"在亿万年前，重庆这片土地曾是恐龙的乐园。科学家在这里挖出了许多恐龙化石，其中最完整的一具叫上游永川龙。现在，它们就静静躺在博物馆里，等着你来发现。","see":["看上游永川龙的完整骨架，想象它当时怎么捕食","看恐龙蛋化石，比比鸵鸟蛋和恐龙蛋谁更大","看三峡古生物展，找找像轮子一样的海百合化石"],"fact":"这里的马门溪龙脖子有9米长，但颈椎骨只有19块，比长颈鹿还少7块。","think":"如果恐龙没有灭绝，你觉得人类还能出现吗？为什么？"},"钓鱼城(合川)":{"story":"700多年前，蒙古大军横扫欧亚，却在重庆这座小山城下栽了大跟头。城里军民坚守36年，连蒙古大汗蒙哥都战死在这里，改写了世界历史。","see":["古战场遗址，看看城墙和炮台遗迹","护国门，感受一夫当关的险要地势","“上帝折鞭处”石碑，听名字就霸气"],"fact":"蒙哥是唯一战死在前线的蒙古大汗，他死后蒙古帝国陷入内乱，停止了西征。","think":"如果钓鱼城没守住，蒙古大军继续西征，今天的欧洲地图会完全不同吗？"},"建川博物馆(大邑安仁)":{"story":"建川博物馆是樊建川叔叔花了20多年建成的，里面有几十个不同主题的馆，像抗战、地震、民俗，还有一只叫‘猪坚强’的猪，在汶川地震后活了36天。","see":["看抗战馆里士兵的破碗和家书，想想他们有多苦","摸一摸地震馆里扭曲的钢筋，感受地动山摇的力量","找‘猪坚强’标本，听它怎么在废墟下坚持活下来"],"fact":"‘猪坚强’本来要被宰杀，地震后没得吃没得喝，靠吃木炭和雨水撑了36天获救。","think":"如果让你给‘猪坚强’写一句墓志铭，你会写什么？"},"安岳石刻":{"story":"安岳石刻比大足更早开凿，这里藏着唐代的大卧佛和宋代翘脚观音，像是石刻的露天博物馆。","see":["卧佛院的大卧佛，长23米，侧卧姿势像在睡觉","毗卢洞的紫竹观音，翘着右腿，很自在的样子","石刻上衣服的褶皱像真布一样，线条流畅"],"fact":"卧佛院的卧佛耳朵里能躲进一个人，它比大足石刻早100多年。","think":"为什么古代人要把佛像刻得那么生动，而不是像机器人一样直直站着？"},"安仁古镇(大邑)":{"story":"安仁古镇曾经住着好多大地主，最出名的是刘文彩。他家的庄园特别大，里面还有收租的泥塑，讲的是以前农民交租的故事。","see":["看刘文彩庄园里用象牙雕刻的萝卜白菜，超级精细。","看民国时期的公馆建筑，比如刘氏祖居，雕花门窗很漂亮。","看古镇里的有轨电车，仿老式车厢，可以坐着逛一圈。"],"fact":"安仁古镇的公馆群是全国最多的，有27座民国公馆，被称为‘公馆之乡’。","think":"如果你穿越回民国，住进这些公馆里，你觉得最不方便的事情会是什么？"},"西岭雪山(大邑)":{"story":"杜甫在成都时，透过窗户看到远处积雪的山，就写下了'窗含西岭千秋雪'的名句。这座山就是西岭雪山，天气好的时候从成都抬头就能望见。","see":["站在日月坪观景台看雪山顶上的积雪","坐索道穿过云海看脚下翻滚的云层","在滑雪场体验雪上运动的乐趣"],"fact":"西岭雪山最高峰大雪塘海拔5364米，是成都第一高峰，比峨眉山还高。","think":"为什么杜甫在成都的房子里就能看到雪山？这需要什么样的天气和地理条件？"},"蒙顶山(雅安)":{"story":"两千多年前，有个叫吴理真的人在蒙顶山种下七棵茶树，这是人类最早种的茶树。后来蒙顶茶就出了名，还有句诗说“扬子江心水，蒙山顶上茶”。","see":["看皇茶园里那七棵古茶树，据说就是吴理真种的原株。","看蒙泉井，井水清甜，古人用它泡蒙顶茶。","看制茶师傅现场手工炒茶，闻闻新鲜的茶香。"],"fact":"蒙顶茶在唐代是皇帝才能喝的贡茶，每年春天还会举行隆重的祭茶仪式。","think":"如果让你选一种味道代表中国，你觉得茶香合适吗？为什么？"},"卧龙中华大熊猫苑":{"story":"卧龙是大熊猫的野外家园，这里人少，熊猫能安静吃竹子。它们每天要花十几个小时啃竹子呢！","see":["看熊猫怎么用爪子剥掉竹子皮，只吃里面嫩的部分","看熊猫趴在树上睡觉，四脚朝天特别可爱","看熊猫宝宝在保育箱里打滚，像黑白芝麻汤圆"],"fact":"大熊猫其实有六个手指，多出来的那个叫伪拇指，专门用来抓竹子。","think":"如果大熊猫不吃竹子，改成吃肉，你觉得它们的身体会有什么变化？"},"桃坪羌寨(理县)":{"story":"两千年前，羌族祖先为了躲避战乱和野兽，用当地石块和泥土建起了这座山寨，碉楼相连、巷子像迷宫，敌人进来了也找不到路。","see":["摸摸碉楼上的射击孔，想象古人怎么防守。","掀开井盖看看寨子地下暗河，水从雪山上流下来。","在迷宫巷子走一次，试试能不能找到出口。"],"fact":"地下水网不仅供水，还能在夏天让整座寨子变凉快，冬天又保温。","think":"为什么羌族人要把房子建得这么绕，而不直接修一条直路？"},"映秀震中遗址(汶川)":{"story":"2008年5月12日，汶川大地震的震中就在映秀。漩口中学的楼房瞬间倒塌，很多师生遇难，但废墟也见证了人们的互助和生命的顽强。","see":["倒塌的教学楼废墟，能看出地震的破坏力","永远停在14:28的时钟雕塑，代表地震发生的时刻","纪念馆里的书包和救援工具，让人想到当时的情景"],"fact":"漩口中学遗址的时钟因地震损坏，指针永远停在14点28分，成为地震的象征。","think":"如果你面临危险，身边有同学需要帮助，你会先保护自己还是先帮助他们？为什么？"},"云阳龙缸":{"story":"传说中，一条巨龙从这里破土而出，留下深不见底的大坑，故名龙缸。其实是石灰岩被水溶解塌陷，历经亿万年形成的。","see":["站在缸口边，探头看下去，深不见底，腿真会发软。","走上透明玻璃廊桥，脚下就是万丈深渊，像在空中行走。","远看龙缸周围的石壁，像被刀切过，一层层岩石记录着历史。"],"fact":"龙缸深度335米，相当于约110层楼高，比埃菲尔铁塔还深35米。","think":"为什么龙缸夏天山顶很凉快？是不是因为它像一个天然大空调？请你猜猜原理。"},"松坪沟(茂县)":{"story":"松坪沟是地震后形成的高山海子群，湖水来自雪山融水，所以特别清澈。秋天时彩林倒映在水里，像打翻的调色盘。","see":["看湖水颜色变化，从浅蓝到深绿像渐变画","看秋天彩林倒映水中，像水下也有一个世界","看水中枯木，泡在水里百年不烂的奇观"],"fact":"松坪沟的水温很低，所以水色特别蓝，是因为水分子吸收红光反射蓝光。","think":"为什么秋天树叶会变红变黄？你能用自己的话解释吗？"},"松潘古城":{"story":"松潘古城是唐代的松州城，文成公主进藏和亲路过这儿，红军长征翻雪山过草地也是从这里出发的。","see":["登上古城墙，看看唐代的夯土和明代包砖是咋连在一起的。","找找城门口文成公主和松赞干布的雕像，听听他们的故事。","摸摸城墙上的弹孔，那是红军长征留下的战斗痕迹。"],"fact":"松潘古城墙有6.2公里长，比西安古城墙还长一公里多呢。","think":"如果文成公主当年没走这条路，你觉得西藏和唐朝的历史会变成啥样？"},"黄龙":{"story":"很久以前，这里是一条冰川，冰川融化后，富含钙的水流出来，慢慢形成了像梯田一样的彩池。","see":["看五彩池像层层叠叠的调色盘，颜色从浅蓝到深绿。","看池边黄色的钙华沉积，摸起来像粗糙的石头。","看雪山倒影在清澈的池水中，像镜子一样。"],"fact":"黄龙钙华每年只长1-3毫米，形成一片彩池需要几万年。","think":"为什么这些池子能保持各种颜色，而不是混成一种？"},"川主寺红军长征纪念碑":{"story":"红军长征过雪山草地时，粮食奇缺，很多战士牺牲了。课本里《金色的鱼钩》讲的就是老班长用鱼钩钓鱼照顾伤员，自己却饿死的故事。","see":["高达41.3米的纪念碑顶端有一尊红军战士铜像，手持步枪和鲜花","基座上的群雕再现了红军过雪山草地的艰难场景","碑园内陈列的实物和图片，展示当年红军用过的物品"],"fact":"这座纪念碑的碑体用了亚金铜贴面，重约400吨，在阳光下金光闪闪，所以叫‘中华第一金碑’。","think":"如果你是《金色的鱼钩》里那个小战士，你会怎样纪念老班长？除了立碑，还有别的办法吗？"},"碧峰峡(雅安)":{"story":"碧峰峡的滴水岩传说是女娲补天时留下的眼泪汇成的。这里的大熊猫基地住着很多熊猫，因为游客少，你能看到它们最自然的样子。","see":["看大熊猫抱着竹子啃，或者趴在树上打盹，超级悠闲。","走峡谷栈道，听瀑布砸进清潭的声音，看水花像碎银一样溅开。","在溪水里找雅鱼，它们身体透明，躲在石头缝里很难发现。"],"fact":"大熊猫刚出生时只有老鼠那么大，全身粉红，眼睛也睁不开，要妈妈抱几个月才能长大。","think":"如果大熊猫的竹子突然开花了（竹子开花后会枯死），你觉得它们该怎么办？"},"王朗自然保护区(平武)":{"story":"王朗是中国最早的大熊猫保护区，1963年就建立了。这里住着白马藏族，他们认为大熊猫是祖先变的。现在你能沿着步道找大熊猫留下的痕迹。","see":["看大熊猫啃过的竹节和留下的便便","看原始冷杉林，树干上长着厚厚的苔藓","看白马藏族木楞房，墙上画着太阳和月亮"],"fact":"大熊猫便便是绿色的，因为吃竹子，闻起来还有股竹叶清香。","think":"大熊猫为什么选择吃竹子这种难消化的食物？如果竹子开花死了它们会怎么办？"},"李白纪念馆(江油)":{"story":"李白在江油度过了少年时光，25岁才离开故乡。据说那首《静夜思》就是他在附近的陇西院看到月光而作。","see":["陇西院：李白故居，看看他小时候生活的院子","太白堂：馆内主殿，陈列李白生平事迹","洗墨池：传说李白洗笔的地方，池水曾变黑"],"fact":"李白名字的由来并非因为李花，而是他母亲梦到太白金星后生下了他。","think":"李白25岁离开家乡后，几乎再也没回来过。你觉得他为什么这么想出去闯荡？"},"叠溪海子(茂县)":{"story":"1933年大地震，整座古城瞬间陷入地下，雨水和山泉填满深坑，变成了这个湖。","see":["看湖水蓝得透亮，像宝石一样","看湖边露出的古城断墙残壁","看周围大山被地震撕开的裂口"],"fact":"叠溪海子是四川人叫的，其实它是个湖，而且没有出水口，水靠蒸发和渗透消失。","think":"湖底的古城里，木头房子和石头房子哪个更可能存留下来？为什么？"},"夹江千佛岩(乐山)":{"story":"隋唐时，人们把佛像刻在青衣江边的崖壁上，密密麻麻的，比乐山大佛还早一百多年呢。","see":["看崖壁上密密麻麻的小佛像，数数一平米有多少尊","看佛像的表情和手势，找找哪一尊最特别","看岩壁上的雨水冲刷痕迹，猜猜佛像怎么保护"],"fact":"千佛岩的佛像最小的只有几厘米高，比你的手掌还小。","think":"如果这些佛像会说话，它们最想告诉你关于古代工匠的什么秘密？"},"窦圌山(江油)":{"story":"李白小时候爬过这座山，还写诗说‘樵夫与耕者，出入画屏中’。山顶三座庙用铁索连起来，和尚们就在索上飞来飞去。","see":["看三座石峰像三根筷子插在地上，又陡又直。","看铁索飞渡表演，穿着红衣服的师傅在索上走。","看山顶云岩寺里的宋代木雕和飞天藏。"],"fact":"窦圌山的铁索长20多米，走上去会晃，但师傅们不打保护。","think":"如果你要练成铁索飞渡，得先具备哪些本事？"},"北川地震遗址":{"story":"2008年5月12日，一场大地震把北川老县城几乎全部摧毁。为了记住这次灾难，人们把这个废墟原样保护起来，成为全国重点文物保护单位。","see":["看看倒塌的楼房，能看出地震的力量有多大。","观察扭曲的公路和桥梁，想象地震时地面如何剧烈晃动。","看看保留的学校废墟，那里有一面没有倒的国旗。"],"fact":"北川的曲山小学废墟上，曾有一面国旗在震后一直飘扬，直到被小心取下保存起来。","think":"如果让你设计一个纪念馆，你会用什么方式让参观的人记住这次地震？"},"嘉阳小火车(犍为)":{"story":"一百多年前，英国工程师设计这种窄轨蒸汽火车用来运煤。现在它成了唯一还在跑的活古董，春天呼哧呼哧穿过油菜花田。","see":["看火车头冒白汽时，能听见汽笛声在峡谷里回荡","看车厢里烧煤的炉子，司机会往里面铲煤","看窄轨比标准铁路窄一半，铁轨间距只有76厘米"],"fact":"这种小火车烧煤产生的蒸汽压力能推动车轮，速度却只有20公里每小时，跟人跑步差不多。","think":"如果让你设计一种又环保又能载客的山区交通工具，你会用什么代替蒸汽火车？"},"安顺场(石棉)":{"story":"1863年石达开在大渡河畔全军覆没。72年后红军也来到这里，却成功强渡，打破了“覆灭”的命运。","see":["渡口纪念碑，看红军战士强渡的浮雕和题词","红军强渡用的木船复制品，感受当时的简陋装备","大渡河急流，想象当年枪林弹雨中的冲锋"],"fact":"红军强渡时只有一条木船和几名突击队员，但凭借精确火力掩护成功登岸。","think":"如果石达开当时有红军那样的组织纪律和群众支持，历史结局会改变吗？"},"麻浩崖墓(乐山)":{"story":"两千年前，乐山古人没有平地墓地，就在山崖上凿出一个个石屋子当墓室。里面藏着石棺和石头画，像他们的地下房间。","see":["看崖壁上凿出的墓门，像石头窗户一样排列。","看墓室里的石棺，古人就用它装遗体。","看画像石上的车马人物，刻的是古人生活场景。"],"fact":"有些崖墓里还有排水沟，怕积水泡坏东西，古人想得真周到。","think":"古人为什么要把墓室凿在悬崖上？是为了防盗还是看风水？"},"罗城古镇(犍为)":{"story":"明朝时，一群移民来到这山顶上，为了互相保护，他们一起把街道修成了大船的样子，像一艘停在山顶的船。","see":["从高处看整条街，像不像一只大船？","两边的老房子像船舱，很整齐。","船头的戏台，以前是大家看戏的地方。"],"fact":"这条船形街建在山顶，是为了躲开洪水，船形寓意“永不沉没”。","think":"如果你是当时的移民，你会把街道修成什么形状？为什么？"},"康定(情歌城)":{"story":"《康定情歌》里唱到的跑马山就在康定城外，这首歌让这座小城出了名。","see":["跑马山上听情歌，看山间白云飘过","情歌广场看当地人跳锅庄舞","折多河穿城而过，水流很急"],"fact":"康定曾是茶马古道上的重镇，马帮从这里把茶叶运到西藏。","think":"为什么歌里要唱‘跑马溜溜的山’，而不是别的山呢？"}};
+var rtDetailCache=load('cj-poi-detail',{});
+function openPoi(name){
+ var sh=document.getElementById('poiSheet'),bk=document.getElementById('poiSheetBk');
+ document.getElementById('psTitle').textContent=name;
+ bk.className='on';sh.className='on';
+ document.body.style.overflow='hidden';
+ renderPoi(name);
+}
+function closePoi(){
+ document.getElementById('poiSheet').className='';
+ document.getElementById('poiSheetBk').className='';
+ document.body.style.overflow='';
+}
+function poiByName(name){
+ var a=POIS.filter(function(p){return p.name===name;});
+ if(a.length)return {name:name,cat:(CAT_Q[name]||['史'])[0],info:a[0].info};
+ var ex=RADAR_EXTRA.filter(function(p){return p.n===name;});
+ if(ex.length)return {name:name,cat:ex[0].c,info:ex[0].info};
+ return null;
+}
+function fmtPoi(d,src){
+ var h='<h4>背景故事</h4><p>'+d.story+'</p>';
+ h+='<h4>三个看点</h4><ul>'+d.see.map(function(s){return '<li>'+s+'</li>';}).join('')+'</ul>';
+ h+='<h4>冷知识</h4><p>'+d.fact+'</p>';
+ h+='<h4>想一想</h4><p class="ps-think">'+d.think+'</p>';
+ h+='<div class="ps-src">'+(src==='bake'?'内容已预烘焙 · 离线可用':'AI 现场生成 · 已缓存本机')+'</div>';
+ return h;
+}
+function renderPoi(name){
+ var body=document.getElementById('psBody');
+ var catEl=document.getElementById('psCat');
+ var poi=poiByName(name);
+ var cat=poi?poi.cat:'史';
+ catEl.textContent=cat;catEl.style.background=CAT_STYLE[cat].color;
+ var d=POI_DETAIL[name]||rtDetailCache[name];
+ if(d){body.innerHTML=fmtPoi(d,'bake');return;}
+ var skl='<div class="skl" style="height:14px;width:60%;margin-bottom:6px"></div><div class="skl" style="height:14px;width:88%;margin-bottom:6px"></div><div class="skl" style="height:14px;width:45%"></div>';
+ body.innerHTML=(poi&&poi.info?'<p>'+poi.info+'</p><div style="height:10px"></div>':'')+skl;
+ aiPoiDetail(name,poi);
+}
+function aiPoiDetail(name,poi){
+ var body=document.getElementById('psBody');
+ var info=poi&&poi.info?poi.info:'';
+ var cat=poi?poi.cat:'史';
+ if(!dsKey){body.innerHTML=(info?'<p>'+info+'</p>':'')+'<div class="ps-src">在雷达卡粘贴 DeepSeek Key 后,这里会显示 AI 详解。</div>';return;}
+ var body0={temperature:0.4,response_format:{type:'json_object'},
+  messages:[{role:'system',content:'你是亲子旅行讲解员,只输出 JSON,不要任何额外文字。'},
+   {role:'user',content:'景点:'+name+'(类别:'+cat+')。已知简介:'+info+'\n请写给 11 岁孩子的深度讲解,输出 JSON 对象:{"story":"背景故事,2-3句","see":["看点1","看点2","看点3"],"fact":"一条冷知识","think":"一个进阶开放问题"}。要求:史实准确不编造;每条15-40字;口语化,禁用"魅力""底蕴""震撼"这类词;see 是到现场具体看什么;think 要开放且与该点强相关。'}]};
+ var tryM=function(idx){
+  body0.model=['deepseek-v4-flash','deepseek-chat'][idx];
+  return fetch('https://api.deepseek.com/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+dsKey},body:JSON.stringify(body0)})
+  .then(function(r){if(!r.ok){if(idx===0&&r.status===400)return tryM(1);throw new Error('HTTP '+r.status);}return r.json();});
+ };
+ tryM(0).then(function(j){
+  var d=JSON.parse(j.choices[0].message.content);
+  if(!(d.story&&d.see&&d.see.length&&d.fact&&d.think))throw new Error('bad');
+  var dd={story:d.story,see:d.see.slice(0,3),fact:d.fact,think:d.think};
+  rtDetailCache[name]=dd;save('cj-poi-detail',rtDetailCache);
+  body.innerHTML=fmtPoi(dd,'ai');
+ }).catch(function(){
+  body.innerHTML=(info?'<p>'+info+'</p>':'')+'<div class="ps-src">AI 详解加载失败(没网或密钥问题),先看简介,回家再补。</div>';
+ });
+}
+
+/* ============ 启动 ============ */
+renderTimeline();
+renderCulture();
+updateProgress();
+renderBooks();
+renderToday();
+initMap();
+loadWeather();
+loadRoads();
+riseScan();
+</script>
+</body>
+</html>
