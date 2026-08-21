@@ -30,3 +30,16 @@ var rl=document.getElementById('radarList').innerHTML;
 assert.ok(rl.includes('r-item'),'雷达应列出附近点位');
 assert.ok(document.getElementById('radarStatus').innerHTML.includes('100km'),'状态行');
 console.log('smoke.test.js: Task6 段通过');
+
+// 接 Task6 段之后：构造四城全晴与暴雨两份假天气，验证规则选择与三峡原逻辑一致
+function fakeCity(prob,mm){var t=[],p=[],s=[],mx=[],mn=[],wc=[];
+ for(var d=1;d<=16;d++){var dd='2026-08-'+('0'+d).slice(-2);t.push(dd);p.push(prob);s.push(mm);mx.push(30);mn.push(20);wc.push(1);}
+ return {daily:{time:t,precipitation_probability_max:p,precipitation_sum:s,temperature_2m_max:mx,temperature_2m_min:mn,weathercode:wc}};}
+var cities=ctx.WX_CITIES||pack.wxCities;
+var arr=cities.map(function(c){return fakeCity(c.role?20:20,1);});   // 全部好天气
+ctx.renderWx(arr);
+assert.ok(document.getElementById('wxVerdict').innerHTML.includes('推荐方案A'),'全晴应推荐 A');
+arr=cities.map(function(c){return fakeCity(90,30);});               // 全部暴雨
+ctx.renderWx(arr);
+assert.ok(document.getElementById('wxVerdict').innerHTML.includes('推荐方案B'),'暴雨应兜底 B');
+console.log('smoke.test.js: Task7 段通过');

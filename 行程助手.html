@@ -648,7 +648,7 @@ function loadWeather(){
   var now=new Date();
   document.getElementById('wxTime').textContent='更新于 '+(now.getMonth()+1)+'.'+now.getDate()+' '+('0'+now.getHours()).slice(-2)+':'+('0'+now.getMinutes()).slice(-2);
  }).catch(function(){
-  document.getElementById('wxBox').textContent='天气获取失败(需联网)。决策请参考手机天气App:山区有暴雨/地灾预警就选方案B(乐山峨眉,全低海拔)。';
+  document.getElementById('wxBox').textContent=WX_RULES?WX_RULES.failText:'天气获取失败(需联网)。';
  });
 }
 function renderWx(arr){
@@ -667,25 +667,30 @@ function renderWx(arr){
   html+='</div></div>';
  });
  document.getElementById('wxBox').innerHTML=html;
- var a=flexMetrics(arr[4]),b=flexMetrics(arr[5]),c=flexMetrics(arr[7]),d=flexMetrics(arr[8]);
+ var roleIdx={};WX_CITIES.forEach(function(c,ci){if(c.role)roleIdx[c.role]=ci;});
+ var mets={};Object.keys(roleIdx).forEach(function(opt){mets[opt]=flexMetrics(arr[roleIdx[opt]]);});
  var box=document.getElementById('wxVerdict');
- if(!a||!b){box.innerHTML='<div class="verdict unk">8.3–8.6 暂超出预报范围,7.31 起打开这里会自动给出方案建议。</div>';return;}
- var txt='8.3–8.6 预报:九寨沟 ≤'+a.maxProb+'%/'+a.sum.toFixed(0)+'mm';
- if(d)txt+=';海螺沟 ≤'+d.maxProb+'%/'+d.sum.toFixed(0)+'mm';
- if(c)txt+=';四姑娘山 ≤'+c.maxProb+'%/'+c.sum.toFixed(0)+'mm';
- txt+=';乐山 ≤'+b.maxProb+'%/'+b.sum.toFixed(0)+'mm。';
- var rec,cls;
- if(a.maxProb<=50&&a.sum<8){rec='A';cls='A';txt+=' 九寨窗口不错,<b>推荐方案A(九寨沟)</b>;山区天气多变,8.2 再确认阿坝州无地灾预警。';}
- else if(d&&d.maxProb<=50&&d.sum<8){rec='D';cls='A';txt+=' 九寨方向雨大,<b>推荐方案D(海螺沟+泸定桥)</b>:磨西镇仅1600m无高反、避暑正好;看贡嘎拼人品,但温泉+泸定桥兜底不亏。';}
- else if(c&&c.maxProb<=45&&c.sum<6){rec='C';cls='A';txt+=' 四姑娘山窗口尚可,可选<b>方案C(四姑娘山)</b>——务必做好高反预案,孩子不适立即下撤。';}
- else{rec='B';cls='B';txt+=' 山区雨水普遍偏大,<b>推荐方案B(三星堆+乐山峨眉)</b>,低海拔不受影响。';}
- box.innerHTML='<div class="verdict '+cls+'">'+txt+'</div>';
+ if(!WX_RULES){box.innerHTML='';return;}
+ var avail=Object.keys(mets).filter(function(k){return mets[k];});
+ if(!avail.length){box.innerHTML='<div class="verdict unk">'+WX_RULES.unknownText+'</div>';return;}
+ var txt=WX_RULES.windowLabel+' 预报:';
+ avail.forEach(function(k,i){var m=mets[k],c=WX_CITIES[roleIdx[k]];
+  txt+=(i?';':'')+((c.short||c.name)+' ≤'+m.maxProb+'%/'+m.sum.toFixed(0)+'mm');});
+ txt+='。';
+ var rec=null,say='';
+ for(var ri=0;ri<WX_RULES.rules.length;ri++){var r=WX_RULES.rules[ri];var m=mets[r.option];
+  if(r.maxProb==null){rec=r.option;say=r.say;break;}           // 兜底规则
+  if(m&&m.maxProb<=r.maxProb&&m.sum<r.maxSum){rec=r.option;say=r.say;break;}}
+ if(!rec){rec='B';say='';}
+ txt+=' '+say;
+ box.innerHTML='<div class="verdict '+(rec==='B'?'B':'A')+'">'+txt+'</div>';
  if(!state.plan.choice){state.plan.choice=rec;save(K('plan'),state.plan);renderTimeline();drawRoutes();}
 }
 function flexMetrics(city){
+ if(!FLEX)return null;
  if(!city||!city.daily)return null;
  var idx=[],i;
- for(i=0;i<city.daily.time.length;i++){var t=city.daily.time[i];if(t>='2026-08-03'&&t<='2026-08-06')idx.push(i);}
+ for(i=0;i<city.daily.time.length;i++){var t=city.daily.time[i];if(t>=FLEX.dateStart&&t<=FLEX.dateEnd)idx.push(i);}
  if(!idx.length)return null;
  var mp=0,sum=0;
  idx.forEach(function(i){var p=city.daily.precipitation_probability_max?city.daily.precipitation_probability_max[i]:null;if(p!=null&&p>mp)mp=p;var s=city.daily.precipitation_sum?city.daily.precipitation_sum[i]:0;if(s)sum+=s;});
