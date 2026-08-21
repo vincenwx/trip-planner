@@ -1,5 +1,5 @@
 var C='ta-v1';
-var SHELL=['./行程助手.html','./manifest.webmanifest','./icons/icon-192.png','./icons/icon-512.png'];
+var SHELL=['./','./index.html','./行程助手.html','./manifest.webmanifest','./icons/icon-192.png','./icons/icon-512.png'];
 self.addEventListener('install',function(e){e.waitUntil(caches.open(C).then(function(c){return c.addAll(SHELL);}).then(function(){return self.skipWaiting();}));});
 self.addEventListener('activate',function(e){e.waitUntil(self.clients.claim());});
 self.addEventListener('fetch',function(e){
