@@ -1011,7 +1011,8 @@ function wizRender(){
  if(PLANNER.step===0)h+=wizStep0();
  else if(PLANNER.step===1)h+=wizStep1();
  else if(PLANNER.step===2)h+=wizStep2();
- else h+='<div class="dim" style="margin:40px 0;text-align:center;line-height:2">步骤 '+PLANNER.step+'(验证/完成)建设中,后续任务接入。</div>';
+ else if(PLANNER.step===3)h+=wizStep3();
+ else h+='<div class="dim" style="margin:40px 0;text-align:center;line-height:2">步骤 '+PLANNER.step+' 建设中,后续任务接入。</div>';
  h+='</div>';
  document.body.innerHTML=h;
 }
@@ -1419,7 +1420,227 @@ function checkLegs(r){
 function bakeLegs(){
  return bakeCall(legPrompt,checkLegs,{maxTokens:3000}).then(function(r){PLANNER.baked.legInfo=r;});
 }
-function startVerify(){alert('验证模块下一任务接入');}
+/* ---- M3-T3 自动验证(S3)+ 组装入库(S4) ---- */
+var NOMI_DELAY=1100,verifyRun=false;   // Nominatim 免费服务礼仪间隔;测试可把 NOMI_DELAY 置 0
+function nomiSleep(){return new Promise(function(res){setTimeout(res,NOMI_DELAY);});}
+function allPoiPoints(){
+ var pts=[];
+ (PLANNER.baked.pois||[]).forEach(function(p){pts.push({name:p.name,lat:p.lat,lng:p.lng,info:p.info||''});});
+ (PLANNER.baked.radarExtra||[]).forEach(function(x){pts.push({name:x.n,lat:x.lat,lng:x.lng,info:x.info||''});});
+ return pts;
+}
+function startVerify(){
+ if(!PLANNER||!PLANNER.baked||!PLANNER.baked.pois)return Promise.reject(new Error('还没有可验证的内容'));
+ PLANNER.step=3;verifyRun=true;wizErr=null;
+ PLANNER.verify={pass:[],corrected:[],pending:[],dropped:[],poiFixes:{}};
+ bakeLog('开始:自动验证');savePlanner();wizRender();
+ var pts=allPoiPoints();
+ // 两路并行:坐标路逐点问 Nominatim;LLM 路全量一批交叉复核
+ return Promise.allSettled([verifyByCoords(pts),verifyByLLM(pts)]).then(function(rs){
+  var coord=rs[0].status==='fulfilled'?rs[0].value:null;
+  var llm=rs[1].status==='fulfilled'?rs[1].value:null;
+  mergeVerify(pts,coord,llm);
+  verifyRun=false;
+  bakeLog('完成:自动验证(通过 '+PLANNER.verify.pass.length+',纠偏 '+PLANNER.verify.corrected.length+',待确认 '+PLANNER.verify.pending.length+')');
+  savePlanner();wizRender();
+ }).catch(function(e){
+  verifyRun=false;wizErr='验证没跑成:'+(e.message||e)+'。点下方「重新验证」再来一次。';
+  bakeLog('失败:自动验证('+(e.message||e)+')');savePlanner();wizRender();
+ });
+}
+// 坐标路:逐点 Nominatim,间隔 1.1s。命中且距原坐标 ≤0.15°→pass;偏远→纠偏;未命中→交给 LLM 路
+function nomiQuery(name){
+ var url='https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=cn&q='+encodeURIComponent(name);
+ return fetch(url).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();});
+}
+function verifyByCoords(pts){
+ var res={},chain=Promise.resolve();
+ pts.forEach(function(pt,i){
+  chain=chain.then(function(){
+   if(i>0)return nomiSleep();
+  }).then(function(){
+   return nomiQuery(pt.name).then(function(arr){
+    var hit=Array.isArray(arr)&&arr.length?arr[0]:null;
+    var la=hit?parseFloat(hit.lat):NaN,lo=hit?parseFloat(hit.lon!=null?hit.lon:hit.lng):NaN;
+    if(!hit||!isFinite(la)||!isFinite(lo)){res[pt.name]={st:'miss'};return;}
+    if(Math.abs(la-pt.lat)<=0.15&&Math.abs(lo-pt.lng)<=0.15)res[pt.name]={st:'pass'};
+    else res[pt.name]={st:'far',lat:la,lng:lo};
+   }).catch(function(){res[pt.name]={st:'miss'};});
+  });
+ });
+ return chain.then(function(){return res;});
+}
+// LLM 路:全量点名+坐标+简介一批 dsJSON 交叉复核(存在性/坐标/史实)
+function verifyPrompt(pts,err){
+ var p='请复核以下亲子行程地点:'+JSON.stringify(pts.map(function(x){return {name:x.name,lat:x.lat,lng:x.lng,info:x.info};}))+'\n';
+ p+='逐个核对:1)是否真实存在、可公开查证;2)坐标是否大致正确;3)简介有无史实错误。'
+  +'只输出 JSON:{results:[{name,ok,reason}]}。ok 为 true/false;不 ok 时 reason 写一句家长能看懂的说明。\n';
+ if(err)p+='上一次结果不合格:'+err+',请修正后重新输出。\n';
+ return p;
+}
+function verifyCheck(pts){
+ return function(r){
+  if(!r||!Array.isArray(r.results))return '复核结果缺 results 数组';
+  for(var i=0;i<pts.length;i++){var n=pts[i].name,hit=null;
+   r.results.forEach(function(x){if(x&&x.name===n)hit=x;});
+   if(!hit)return '复核结果缺「'+n+'」';
+   if(typeof hit.ok!=='boolean')return n+' 的 ok 不是布尔值';}
+  return null;
+ };
+}
+function verifyByLLM(pts){
+ return bakeCall(function(err){return verifyPrompt(pts,err);},verifyCheck(pts),{maxTokens:3000})
+ .then(function(r){
+  var res={};
+  r.results.forEach(function(x){if(x&&x.name)res[x.name]={ok:!!x.ok,reason:x.reason||''};});
+  return res;
+ });
+}
+// 合并两路:坐标路已判 pass/纠偏 的以坐标路为准;未命中的以 LLM 路为准(ok→pass,不 ok→pending)
+function mergeVerify(pts,coord,llm){
+ var v=PLANNER.verify;
+ pts.forEach(function(pt){
+  var c=coord?coord[pt.name]:null;
+  if(c&&c.st==='pass'){v.pass.push(pt.name);return;}
+  if(c&&c.st==='far'){
+   v.corrected.push({name:pt.name,from:{lat:pt.lat,lng:pt.lng},to:{lat:c.lat,lng:c.lng}});
+   v.poiFixes[pt.name]={lat:c.lat,lng:c.lng};return;
+  }
+  var l=llm?llm[pt.name]:null;
+  if(l&&l.ok){v.pass.push(pt.name);return;}
+  if(l)v.pending.push({name:pt.name,reason:l.reason||'AI 复核觉得这个点可能有问题'});
+  else v.pending.push({name:pt.name,reason:'地图没查到,自动复核也没走完,麻烦你人工确认一下'});
+ });
+}
+function resolvePending(name,keep){
+ var v=PLANNER.verify;if(!v)return;
+ for(var i=0;i<v.pending.length;i++){
+  if(v.pending[i].name===name){
+   v.pending.splice(i,1);
+   if(keep)v.pass.push(name);
+   else v.dropped.push(name);
+   break;
+  }
+ }
+ savePlanner();wizRender();
+}
+function wizStep3(){
+ var h='<div class="dim" style="margin-bottom:10px">第 4 步 · 自动验证:地图和 AI 分两路核对每个地点是不是真的、坐标对不对。</div>';
+ if(verifyRun||!PLANNER.verify)
+  return h+'<div class="dim" style="text-align:center;margin:40px 0;line-height:2">⏳ 正在逐个核对地点…<br>用的是免费地图服务,点多的话会慢一点,别关页面。</div>';
+ var v=PLANNER.verify;
+ var total=v.pass.length+v.corrected.length+v.pending.length+v.dropped.length;
+ var expect=(PLANNER.baked.pois||[]).length+(PLANNER.baked.radarExtra||[]).length;
+ if(total<expect){
+  h+='<div style="background:var(--amber-lt);border-radius:12px;padding:12px 14px;margin:10px 0;font-size:13px">上次验证没跑完(只核了 '+total+'/'+expect+' 个点),重新来一次就好。</div>';
+  h+='<button class="btn" onclick="startVerify()">重新验证</button>';
+  return h;
+ }
+ var card=function(inner){return '<div style="background:#fff;border-radius:14px;padding:12px 14px;margin:10px 0;box-shadow:0 1px 4px rgba(0,0,0,.08)">'+inner+'</div>';};
+ var g='<b>✅ 通过 '+v.pass.length+'</b><div class="dim" style="font-size:12px;margin:4px 0">这些点查过了:真实存在,坐标也对得上。</div>';
+ g+='<div style="font-size:13px;line-height:1.8">'+v.pass.join('、')+'</div>';
+ h+=card(g);
+ if(v.corrected.length){
+  g='<b>🔧 已纠偏 '+v.corrected.length+'</b><div class="dim" style="font-size:12px;margin:4px 0">点是真的,但原来的坐标偏了,已经换成地图上查到的位置:</div>';
+  v.corrected.forEach(function(c){
+   g+='<div style="font-size:13px;margin:3px 0">'+c.name+' <span class="dim" style="font-size:12px">'+c.from.lat+','+c.from.lng+' → <b>'+c.to.lat+','+c.to.lng+'</b></span></div>';
+  });
+  h+=card(g);
+ }
+ if(v.pending.length){
+  g='<b>⚠️ 待确认 '+v.pending.length+'</b><div class="dim" style="font-size:12px;margin:4px 0">这几个点地图和 AI 都没把握,你来拍板:留下(用原来的坐标)还是丢掉。</div>';
+  v.pending.forEach(function(p){
+   g+='<div style="margin:8px 0;padding-top:8px;border-top:1px dashed var(--line)"><b style="font-size:14px">'+p.name+'</b>';
+   g+='<div class="dim" style="font-size:12px;margin:3px 0">'+(p.reason||'')+'</div>';
+   g+='<button class="btn" data-n="'+p.name+'" onclick="resolvePending(this.dataset.n,true)">保留</button> ';
+   g+='<button class="btn" data-n="'+p.name+'" onclick="resolvePending(this.dataset.n,false)">丢弃</button></div>';
+  });
+  h+=card(g);
+  h+='<div class="dim" style="font-size:12px;margin:8px 2px">「待确认」的点处理完,就能入库了。</div>';
+ }
+ if(wizErr)h+='<div style="color:var(--cinn);font-size:13px;margin:8px 0">'+wizErr+'</div>';
+ if(!v.pending.length)
+  h+='<button class="btn" style="width:100%;margin-top:8px" onclick="finishPlanner()">完成,加入行程库</button>';
+ return h;
+}
+/* ---- S4 组装入库 ---- */
+function isoAdd(iso,n){var d=new Date(iso+'T00:00:00Z');d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10);}
+function assemblePack(){
+ var s=PLANNER.skeleton,b=PLANNER.baked,v=PLANNER.verify||{};
+ var dropped=v.dropped||[],fixes=v.poiFixes||{};
+ var kept=function(n){return dropped.indexOf(n)<0;};
+ // 剔除丢弃点 + 应用纠偏坐标
+ var pois=(b.pois||[]).filter(function(p){return kept(p.name);}).map(function(p){
+  var q=JSON.parse(JSON.stringify(p)),f=fixes[q.name];
+  if(f){q.lat=f.lat;q.lng=f.lng;}
+  return q;
+ });
+ var radar=(b.radarExtra||[]).filter(function(x){return kept(x.n);}).map(function(x){
+  var q=JSON.parse(JSON.stringify(x)),f=fixes[q.n];
+  if(f){q.lat=f.lat;q.lng=f.lng;}
+  return q;
+ });
+ var detail={};
+ pois.forEach(function(p){if(b.poiDetail&&b.poiDetail[p.name])detail[p.name]=b.poiDetail[p.name];});
+ radar.forEach(function(x){if(b.poiDetail&&b.poiDetail[x.n])detail[x.n]=b.poiDetail[x.n];});
+ var meta=JSON.parse(JSON.stringify(s.meta));meta.id='t'+Date.now();
+ // flex:机动段接在主行程天数之后——doneKey=机动首天 n,insertBeforeDay=机动段后一天 n,日期顺推
+ var flex=null;
+ if(s.flex&&b.flex){
+  var maxN=0;s.days.forEach(function(d){if(d.n>maxN)maxN=d.n;});
+  var dk=maxN+1,ib=dk+s.flex.daysCount;
+  var palette=['#2f6fb2','#c05b4d','#2f6f5e','#8a6d3b','#6b5b95'],opts={};
+  b.flex.options.forEach(function(o,i){
+   opts[o.key]={name:o.name,short:o.short,color:palette[i%palette.length],anchor:o.anchor,note:o.note,rows:o.rows,know:o.know};
+  });
+  flex={insertBeforeDay:ib,doneKey:dk,daysCount:s.flex.daysCount,
+   badge:'D'+dk+'–'+(ib-1),title:'机动方案',hint:'看天气和状态,决定要不要启用',
+   dateStart:isoAdd(s.meta.dateEnd,1),dateEnd:isoAdd(s.meta.dateEnd,s.flex.daysCount),options:opts};
+ }
+ // optimize:order=days 里 anchor 首现顺序(home 提前),anchorDays 由 days 归纳,home=出发地锚点
+ var order=[],anchorDays={};
+ s.days.forEach(function(d){
+  if(order.indexOf(d.anchor)<0)order.push(d.anchor);
+  if(!anchorDays[d.anchor])anchorDays[d.anchor]=[];
+  anchorDays[d.anchor].push(d.n);
+ });
+ var home=order[0],req=PLANNER.req||{};
+ Object.keys(s.anchors).forEach(function(k){if(s.anchors[k].name===req.from)home=k;});
+ order=order.filter(function(k){return k!==home;});order.unshift(home);
+ var aks=Object.keys(s.anchors),sla=0,slo=0;
+ aks.forEach(function(k){sla+=s.anchors[k].lat;slo+=s.anchors[k].lng;});
+ var pack={schema:1,meta:meta,anchors:s.anchors,days:s.days,legs:s.legs,legInfo:b.legInfo||{},
+  pois:pois,radarExtra:radar,poiDetail:detail,
+  flex:flex,bookings:b.bookings||[],wxCities:b.wxCities||[],wxRules:flex?(b.wxRules||null):null,
+  optimize:{order:order,anchorDays:anchorDays,home:home,
+   note:'注:home 是出发地;order 按行程里首次到达的顺序排;anchorDays 是各锚点停留的天。'},
+  culture:s.culture,
+  map:{center:[Math.round(sla/aks.length*10)/10,Math.round(slo/aks.length*10)/10],zoom:5,
+   mainPath:order.filter(function(k){return k!==home;}),fitAnchors:aks},
+  ai:{radiusKm:100,routeKm:20,cats:['文','史','地','科']}};
+ // 壳内轻校验 + 深度自检(讲解覆盖全部点名),不过则报错误页显示具体问题
+ var err=validatePack(pack);
+ if(!err){
+  var miss=[];
+  pois.forEach(function(p){if(!detail[p.name])miss.push(p.name);});
+  radar.forEach(function(x){if(!detail[x.n])miss.push(x.n);});
+  if(miss.length)err='讲解内容缺:'+miss.join('、');
+ }
+ if(err){wizErr='组装没成功:'+err+'。可以重新验证,或「← 返回行程库」后从草稿继续。';wizRender();return null;}
+ return pack;
+}
+function finishPlanner(){
+ var v=PLANNER&&PLANNER.verify;
+ if(!v||v.pending.length)return;   // 待确认没处理完不能入库(按钮本就藏着,双保险)
+ var pack=assemblePack();
+ if(!pack)return;
+ var trips=load('ta-trips',{});
+ trips[pack.meta.id]=pack;
+ save('ta-trips',trips);save('ta-current',pack.meta.id);
+ localStorage.removeItem('ta-planner');
+ PLANNER=null;
+ location.reload();
+}
 
 /* ============ 启动 ============ */
 function validatePack(p){
