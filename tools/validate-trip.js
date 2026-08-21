@@ -98,6 +98,12 @@ function validateTrip(pack){
       }
       if(!inAnchors(d.anchor))E('days['+i+'].anchor '+JSON.stringify(d.anchor)+' 不在 anchors 里');
       if(!isISO(d.full))E('days['+i+'].full 不是 ISO 日期: '+JSON.stringify(d.full));
+      if(d.tags!=null){
+        if(!Array.isArray(d.tags))E('days['+i+'].tags 不是数组');
+        else d.tags.forEach(function(t,ti){
+          if(!t||typeof t!=='object'||typeof t.t!=='string'||!t.t)E('days['+i+'].tags['+ti+'] 应为 {t:"文字"} 对象');
+        });
+      }
     });
   }
 

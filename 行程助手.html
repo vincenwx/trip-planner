@@ -455,7 +455,7 @@ function dayCard(d){
  h+='<div class="d-body">';
  if(d.plan)h+='<h4>行程</h4><ul>'+lis(d.plan)+'</ul>';
  if(d.know)h+='<h4>讲给孩子</h4><ul class="know">'+lis(d.know)+'</ul>';
- if(d.tags&&d.tags.length)h+='<div class="tags">'+d.tags.map(function(t){return '<span class="tag'+(t.info?' info':'')+'">'+t.t+'</span>';}).join('')+'</div>';
+ if(d.tags&&d.tags.length)h+='<div class="tags">'+d.tags.map(function(t){var to=(typeof t==='string')?{t:t}:t;return '<span class="tag'+(to.info?' info':'')+'">'+to.t+'</span>';}).join('')+'</div>';
  h+='<span class="d-skiplink" onclick="event.stopPropagation();toggleSkipDay('+d.n+','+!state.skip.days[d.n]+')">'+(state.skip.days[d.n]?'恢复这天':'跳过这天')+'</span>';
  h+='</div></div></article>';
  return h;
@@ -1099,6 +1099,13 @@ function skelCheck(s){
  if(!Array.isArray(s.legs)||!s.legs.length)return 'legs 为空';
  return null;
 }
+// AI 常把 tags 写成字符串数组,统一清洗成 {t,info?} 对象
+function normTags(days){
+ (days||[]).forEach(function(d){
+  if(!Array.isArray(d.tags)){d.tags=[];return;}
+  d.tags=d.tags.map(function(t){return (typeof t==='string')?{t:t}:t;}).filter(function(t){return t&&t.t;});
+ });
+}
 function genSkeleton(){
  if(!PLANNER||!PLANNER.req)return Promise.reject(new Error('先填需求'));
  wizErr=null;wizBusy=true;wizRender();
@@ -1111,7 +1118,7 @@ function genSkeleton(){
    return s2;
   });
  }).then(function(s){
-  PLANNER.skeleton=s;PLANNER.step=1;wizErr=null;wizBusy=false;
+  normTags(s.days);PLANNER.skeleton=s;PLANNER.step=1;wizErr=null;wizBusy=false;
   savePlanner();wizRender();
  }).catch(function(e){
   wizErr=e.message||String(e);wizBusy=false;wizRender();
@@ -1128,7 +1135,7 @@ function skelRevise(text){
  return dsJSON(p,{maxTokens:16000}).then(function(s){
   var err=skelCheck(s);
   if(err)throw new Error('修改后的结果不合格:'+err);
-  PLANNER.skeleton=s;wizErr=null;wizBusy=false;
+  normTags(s.days);PLANNER.skeleton=s;wizErr=null;wizBusy=false;
   savePlanner();wizRender();
  }).catch(function(e){
   wizErr=e.message||String(e);wizBusy=false;wizRender();
@@ -1593,6 +1600,7 @@ function wizStep3(){
 function isoAdd(iso,n){var d=new Date(iso+'T00:00:00Z');d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10);}
 function assemblePack(){
  var s=PLANNER.skeleton,b=PLANNER.baked,v=PLANNER.verify||{};
+ normTags(s.days||[]);
  var dropped=v.dropped||[],fixes=v.poiFixes||{};
  var kept=function(n){return dropped.indexOf(n)<0;};
  // 剔除丢弃点 + 应用纠偏坐标
