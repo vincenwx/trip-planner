@@ -972,7 +972,7 @@ function aiPoiDetail(name,poi){
 }
 
 /* ============ M3 行前规划流水线:向导 + 骨架对稿 ============ */
-var PLANNER=null,wizErr=null;
+var PLANNER=null,wizErr=null,wizBusy=false;
 function loadPlanner(){PLANNER=load('ta-planner',null);}
 function savePlanner(){save('ta-planner',PLANNER);}
 function dsJSON(userPrompt,opts){
@@ -1073,6 +1073,7 @@ function wizSubmit(req){
  if(!req.modes||!req.modes.length)req.modes=['drive'];
  PLANNER.req=req;PLANNER.step=1;wizErr=null;
  savePlanner();wizRender();
+ genSkeleton().catch(function(){});   // 提交需求后直接开始生成骨架
 }
 function skelPrompt(req,fixErr){
  var p='请为以下亲子旅行需求生成行程骨架(动线草案),只输出 JSON,不要任何额外文字。\n';
@@ -1100,7 +1101,7 @@ function skelCheck(s){
 }
 function genSkeleton(){
  if(!PLANNER||!PLANNER.req)return Promise.reject(new Error('先填需求'));
- wizErr=null;
+ wizErr=null;wizBusy=true;wizRender();
  return dsJSON(skelPrompt(PLANNER.req,null),{maxTokens:16000}).then(function(s){
   var err=skelCheck(s);
   if(!err)return s;
@@ -1110,10 +1111,10 @@ function genSkeleton(){
    return s2;
   });
  }).then(function(s){
-  PLANNER.skeleton=s;PLANNER.step=1;wizErr=null;
+  PLANNER.skeleton=s;PLANNER.step=1;wizErr=null;wizBusy=false;
   savePlanner();wizRender();
  }).catch(function(e){
-  wizErr=e.message||String(e);wizRender();
+  wizErr=e.message||String(e);wizBusy=false;wizRender();
   throw e;
  });
 }
@@ -1123,18 +1124,22 @@ function skelRevise(text){
  var p='这是当前行程方案的完整 JSON:\n'+JSON.stringify(PLANNER.skeleton)+'\n\n'
   +'用户修改意见:'+text+'\n'
   +'请按修改意见调整(没提到的部分保持不变),重新输出完整的同结构 JSON,只输出 JSON,不要任何额外文字。';
+ wizErr=null;wizBusy=true;wizRender();
  return dsJSON(p,{maxTokens:16000}).then(function(s){
   var err=skelCheck(s);
   if(err)throw new Error('修改后的结果不合格:'+err);
-  PLANNER.skeleton=s;wizErr=null;
+  PLANNER.skeleton=s;wizErr=null;wizBusy=false;
   savePlanner();wizRender();
  }).catch(function(e){
-  wizErr=e.message||String(e);wizRender();
+  wizErr=e.message||String(e);wizBusy=false;wizRender();
   throw e;
  });
 }
 function wizStep1(){
  var s=PLANNER.skeleton;
+ if(wizBusy){
+  return '<div class="dim" style="margin:40px 0;text-align:center;line-height:2">🤖 AI 正在生成骨架,一般要 10–60 秒<br>请稍候,别关页面…</div>';
+ }
  if(!s){
   var h0='<div class="dim" style="margin:30px 0;text-align:center;line-height:2">';
   h0+=wizErr?('生成失败:'+wizErr):'骨架还没有生成。';
