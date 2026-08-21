@@ -43,3 +43,11 @@ arr=cities.map(function(c){return fakeCity(90,30);});               // 全部暴
 ctx.renderWx(arr);
 assert.ok(document.getElementById('wxVerdict').innerHTML.includes('推荐方案B'),'暴雨应兜底 B');
 console.log('smoke.test.js: Task7 段通过');
+
+// 全量回归：四页签容器均有内容、文史分组、预约提醒、POI 抽屉
+assert.ok(document.getElementById('culBox').innerHTML.split('cul-group').length===5,'文史四组');
+assert.ok(document.getElementById('bookBox').innerHTML.includes('湖北省博物馆'),'预约提醒渲染');
+ctx.openPoi('黄鹤楼');
+assert.ok(document.getElementById('psBody').innerHTML.includes('背景故事'),'预烘焙讲解离线打开');
+ctx.closePoi();
+console.log('smoke.test.js: 全部通过 ('+__filename+')');

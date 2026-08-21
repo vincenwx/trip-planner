@@ -4,9 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="description" content="无锡—武汉—奉节—重庆—成都—宜昌 16 天亲子自驾:行程、文史导览、真实道路地图、天气决策与预约提醒。">
+<meta name="description" content="行程助手:数据驱动的亲子自驾行程单页应用,含行程时间轴、文史导览、真实道路地图、天气决策与预约提醒。">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%232f6f5e'/%3E%3Cpath d='M14 44 L24 26 L32 38 L40 22 L50 44 Z' fill='%23e8cf83'/%3E%3Crect x='14' y='48' width='36' height='3' rx='1.5' fill='%23f5f1e6'/%3E%3C/svg%3E">
-<title>诗路长江 · 无锡—成都亲子自驾 16 天</title>
+<title>行程助手</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700;9..144,900&family=Noto+Serif+SC:wght@600;700;900&display=swap">
@@ -270,10 +270,10 @@ section.on{display:block;}
 
 <header class="hero">
   <div class="wrap">
-    <div class="eyebrow"><i></i>长江 · 诗词 · 自驾 16 天</div>
-    <h1>诗路长江</h1>
-    <div class="route">无锡 <b>→</b> 武汉 <b>→</b> 奉节 <b>→</b> 重庆 <b>→</b> 成都 <b>→</b> 宜昌 <b>→</b> 无锡</div>
-    <div class="dates">2026.7.25(周六)出发 · 8.9(周日)到家 · 亲子人文环线</div>
+    <div class="eyebrow"><i></i><span id="heroKicker">行程助手</span></div>
+    <h1 id="heroTitle">行程助手</h1>
+    <div class="route" id="heroRoute">加载行程后显示路线</div>
+    <div class="dates" id="heroDates"></div>
     <div class="progress"><i id="progBar"></i></div>
     <div class="progress-txt" id="progTxt">已完成 0 / 16 天</div>
   </div>
@@ -304,16 +304,13 @@ section.on{display:block;}
     <div class="map-hint" id="nearTxt">点地图任意位置可手动设置“我在哪”;点任意路段可查看该段距离和沿途站点。</div>
     <div class="legend">
       <span><i style="background:#2f6f5e"></i>去程/回程主线</span>
-      <span><i style="background:#2f6fb2"></i>A 九寨沟(蓝)</span>
-      <span><i style="background:#e07b24"></i>B 乐山峨眉(橙)</span>
-      <span><i style="background:#d13c3c"></i>C 四姑娘山(红)</span>
-      <span><i style="background:#4ca64c"></i>D 海螺沟(绿)</span>
+      <span id="flexLegend"></span>
       <span>● 红=景点 · 黄=车览 · ➊ 宿营城市</span>
     </div>
     <div id="roadBox"><div class="skl" style="height:14px;width:70%;margin-bottom:6px"></div><div class="skl" style="height:14px;width:45%"></div></div>
 
     <div class="scard"><div class="sc-core">
-      <h3 id="radarTitle">文史地雷达<span class="en">100km 自动发现 · 11岁版</span></h3>
+      <h3 id="radarTitle">文史地雷达<span class="en">自动发现</span></h3>
       <div class="radar-filters">
         <button class="rf on" data-c="文" onclick="rfToggle(this)">文</button>
         <button class="rf on" data-c="史" onclick="rfToggle(this)">史</button>
@@ -347,7 +344,7 @@ section.on{display:block;}
 
     <div class="scard"><div class="sc-core">
       <h3>剩余行程最优重排<span class="en">基于当前位置/进度</span></h3>
-      <div class="dim" style="margin-bottom:10px">勾选“已完成”的天数后,这里会用剩余宿营点重新穷举最优顺序(终点固定无锡),并和原计划比里程。</div>
+      <div class="dim" style="margin-bottom:10px" id="optHint">勾选“已完成”的天数后,这里会用剩余宿营点重新穷举最优顺序,并和原计划比里程。</div>
       <button class="btn" onclick="runOptimize()"><span>重新计算</span><span class="b-ic">↻</span></button>
       <div id="optBox" style="margin-top:12px" class="dim">尚未计算。</div>
     </div></div>
@@ -409,6 +406,14 @@ function mountTrip(pack){
   document.title=META.title;
   var culHintEl=document.getElementById('culHint');if(culHintEl)culHintEl.textContent=CULTURE.hint;
   var radarTitleEl=document.getElementById('radarTitle');if(radarTitleEl)radarTitleEl.textContent='文史地雷达 · '+META.kidAge+'岁版';
+  function dnum(s){return s.split('-').map(function(x){return parseInt(x,10);});}
+  var ds=dnum(META.dateStart),de=dnum(META.dateEnd);
+  var heroKickerEl=document.getElementById('heroKicker');if(heroKickerEl)heroKickerEl.textContent=META.kicker;
+  var heroTitleEl=document.getElementById('heroTitle');if(heroTitleEl)heroTitleEl.textContent=META.title;
+  var heroRouteEl=document.getElementById('heroRoute');if(heroRouteEl)heroRouteEl.innerHTML=META.routeLine.replace(/→/g,'<b>→</b>');
+  var heroDatesEl=document.getElementById('heroDates');if(heroDatesEl)heroDatesEl.textContent=ds[0]+'.'+ds[1]+'.'+ds[2]+'–'+de[1]+'.'+de[2];
+  var flexLegendEl=document.getElementById('flexLegend');if(flexLegendEl)flexLegendEl.innerHTML=Object.keys(FLEX_OPTS).map(function(k){var o=FLEX_OPTS[k];return '<span><i style="background:'+o.color+'"></i>'+k+' '+o.short+'</span>';}).join('');
+  var optHintEl=document.getElementById('optHint');if(optHintEl&&OPTIMIZE&&ANCHORS[OPTIMIZE.home])optHintEl.textContent='勾选“已完成”的天数后,这里会用剩余宿营点重新穷举最优顺序(终点固定'+ANCHORS[OPTIMIZE.home].name+'),并和原计划比里程。';
 }
 
 /* ============ 入场动画(IntersectionObserver) ============ */
@@ -829,7 +834,7 @@ function runRadar(){
 function radarZoom(i){var p=radarData[i];if(!p||!map)return;var g=wgs2gcj(p.lat,p.lng);map.setView(g,Math.max(map.getZoom(),9));}
 /* ---- DeepSeek AI 深度扫描 ---- */
 function gridId(me){return (Math.round(me.lat*2)/2).toFixed(1)+'_'+(Math.round(me.lng*2)/2).toFixed(1);}
-function validAiPt(p){return p&&p.name&&CAT_STYLE[p.cat]&&typeof p.lat==='number'&&typeof p.lng==='number'&&p.lat>18&&p.lat<54&&p.lng>73&&p.lng<135&&p.info;}
+function validAiPt(p){if(!p||!p.name||!CAT_STYLE[p.cat]||typeof p.lat!=='number'||typeof p.lng!=='number'||!p.info)return false;return META.region==='cn'?(p.lat>18&&p.lat<54&&p.lng>73&&p.lng<135):(p.lat>=-85&&p.lat<=85&&p.lng>=-180&&p.lng<=180);}
 function showKeyBox(){document.getElementById('aiKeyBox').style.display='block';}
 function saveKey(){
  var v=document.getElementById('aiKeyIn').value.trim();
@@ -844,12 +849,13 @@ function aiScan(force){
  if(!dsKey){showKeyBox();st.textContent='首次使用请先粘贴 DeepSeek API Key(见下方输入框)。';return;}
  var gid=gridId(state.me);
  if(aiPacks[gid]&&!force){st.innerHTML='本区域已扫描('+aiPacks[gid].pts.length+' 点) · <a style="color:var(--teal);cursor:pointer;text-decoration:underline" onclick="aiScan(true)">重新扫描</a>';return;}
- st.textContent='AI 正在扫描周围 100 公里(约 10–20 秒)…';
+ st.textContent='AI 正在扫描周围 '+AI_CFG.radiusKm+' 公里(约 10–20 秒)…';
+ var catsDesc=AI_CFG.cats.length===4&&AI_CFG.cats[0]==='文'&&AI_CFG.cats[1]==='史'&&AI_CFG.cats[2]==='地'&&AI_CFG.cats[3]==='科'?'文(文学诗词相关)、史(历史古迹/博物馆)、地(自然地理/地质)、科(科学工程/科技场馆)':AI_CFG.cats.join('/');
  var body={
   temperature:0.3,response_format:{type:'json_object'},
   messages:[
    {role:'system',content:'你是亲子旅行文史向导。只输出 JSON,不要任何额外文字。'},
-   {role:'user',content:'以经纬度('+state.me.lat.toFixed(4)+','+state.me.lng.toFixed(4)+')为圆心、半径100公里范围内,列出20个真实存在、可公开查证的参观点。类别限:文(文学诗词相关)、史(历史古迹/博物馆)、地(自然地理/地质)、科(科学工程/科技场馆)。要求:必须真实存在,不要编造;坐标给 WGS-84 估算值;info 用适合 11 岁孩子的口吻写 2-3 句,先讲是什么、再讲为什么有意思;q 给一个开放式启发问题。输出 JSON 对象,格式:{"points":[{"name":"...","cat":"文|史|地|科","lat":30.12,"lng":114.56,"info":"...","q":"..."}]}'}
+   {role:'user',content:'以经纬度('+state.me.lat.toFixed(4)+','+state.me.lng.toFixed(4)+')为圆心、半径'+AI_CFG.radiusKm+'公里范围内,列出20个真实存在、可公开查证的参观点。类别限:'+catsDesc+'。要求:必须真实存在,不要编造;坐标给 WGS-84 估算值;info 用适合 '+META.kidAge+' 岁孩子的口吻写 2-3 句,先讲是什么、再讲为什么有意思;q 给一个开放式启发问题。输出 JSON 对象,格式:{"points":[{"name":"...","cat":"'+AI_CFG.cats.join('|')+'","lat":30.12,"lng":114.56,"info":"...","q":"..."}]}'}
   ]
  };
  var tryModel=function(idx){
@@ -921,7 +927,7 @@ function aiPoiDetail(name,poi){
  if(!dsKey){body.innerHTML=(info?'<p>'+info+'</p>':'')+'<div class="ps-src">在雷达卡粘贴 DeepSeek Key 后,这里会显示 AI 详解。</div>';return;}
  var body0={temperature:0.4,response_format:{type:'json_object'},
   messages:[{role:'system',content:'你是亲子旅行讲解员,只输出 JSON,不要任何额外文字。'},
-   {role:'user',content:'景点:'+name+'(类别:'+cat+')。已知简介:'+info+'\n请写给 11 岁孩子的深度讲解,输出 JSON 对象:{"story":"背景故事,2-3句","see":["看点1","看点2","看点3"],"fact":"一条冷知识","think":"一个进阶开放问题"}。要求:史实准确不编造;每条15-40字;口语化,禁用"魅力""底蕴""震撼"这类词;see 是到现场具体看什么;think 要开放且与该点强相关。'}]};
+   {role:'user',content:'景点:'+name+'(类别:'+cat+')。已知简介:'+info+'\n请写给 '+META.kidAge+' 岁孩子的深度讲解,输出 JSON 对象:{"story":"背景故事,2-3句","see":["看点1","看点2","看点3"],"fact":"一条冷知识","think":"一个进阶开放问题"}。要求:史实准确不编造;每条15-40字;口语化,禁用"魅力""底蕴""震撼"这类词;see 是到现场具体看什么;think 要开放且与该点强相关。'}]};
  var tryM=function(idx){
   body0.model=['deepseek-v4-flash','deepseek-chat'][idx];
   return fetch('https://api.deepseek.com/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+dsKey},body:JSON.stringify(body0)})
