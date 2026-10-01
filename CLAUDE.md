@@ -13,7 +13,7 @@
 ## 红线
 
 - 编辑 `行程助手.html` 用内容匹配 Edit（CRLF 文件，Read 显示 LF 是正常的）
-- **测试全绿才算完成**：`validate / unwrap / smoke / pipeline / pwa` 五个测试 + 两个 trip 包过校验器。mock 测不出的格式问题，真实 API 验收才算数
+- **测试全绿才算完成**：`validate / unwrap / smoke / pipeline / pwa / realtime` 六个测试 + 两个 trip 包过校验器。mock 测不出的格式问题，真实 API 验收才算数
 - DeepSeek：现役模型只有 `deepseek-v4-flash` / `deepseek-v4-pro`（`deepseek-chat` 已下线）。新调用一律走壳内 `dsJSON`/`bakeCall`（已处理 thinking 关闭、数组剥壳、模型回退），不要新造裸 fetch
 - API key 只存 localStorage，绝不写进任何文件（本仓库公开）
 - 这个项目不引入任何 npm 依赖

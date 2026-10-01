@@ -179,6 +179,18 @@ section.on{display:block;}
 #legInfo .l-link{display:inline-block; margin-top:10px; font-size:13px; color:var(--teal); text-decoration:underline; cursor:pointer;}
 #roadBox{font-size:12px;color:var(--muted);margin-top:10px;background:rgba(38,36,31,.03);border:1px solid var(--line);border-radius:12px;padding:10px 12px;line-height:1.7;font-variant-numeric:tabular-nums;}
 #roadBox b{color:var(--teal);}
+.btn.on{background:var(--cinn); border-color:var(--cinn); color:#fdfbf6; box-shadow:0 4px 14px rgba(192,81,63,.3);}
+.btn.on .b-ic{background:rgba(255,255,255,.2);}
+.traf-tip{display:none; font-size:11.5px; color:var(--muted); margin-top:8px; background:rgba(38,36,31,.03); border:1px solid var(--line); border-radius:10px; padding:8px 11px; line-height:1.7;}
+.traf-tip.show{display:block;}
+.traf-tip i{display:inline-block; width:10px; height:10px; border-radius:2px; margin:0 3px 0 8px; vertical-align:middle;}
+.traf-tip i:first-child{margin-left:0;}
+.crowd-row{display:flex; align-items:center; gap:10px; padding:7px 0; border-bottom:1px dashed var(--line); font-size:13px;}
+.crowd-row:last-of-type{border-bottom:0;}
+.crowd-dot{flex:none; width:34px; height:22px; border-radius:7px; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; color:#fff;}
+.crowd-date{flex:none; width:80px; color:var(--muted); font-size:12px; font-variant-numeric:tabular-nums;}
+.crowd-main{flex:1; min-width:0;}
+.crowd-why{font-size:11px; color:var(--muted); margin-top:1px; line-height:1.5;}
 
 /* ===== 文史 ===== */
 .cul-group{margin:20px 0 10px; display:flex; align-items:center; gap:10px;}
@@ -204,6 +216,20 @@ section.on{display:block;}
 .wx-days{display:flex; gap:6px; flex-wrap:wrap; margin-top:5px;}
 .wx-day{background:rgba(38,36,31,.03); border:1px solid var(--line); border-radius:10px; padding:5px 8px; font-size:11px; text-align:center; min-width:52px;}
 .wx-day .ic{font-size:17px; display:block; margin-bottom:1px;}
+.wx-now{background:rgba(38,36,31,.03); border:1px solid var(--line); border-radius:12px; padding:10px 12px; margin-bottom:12px;}
+.wx-now .nw-head{display:flex; justify-content:space-between; align-items:baseline; font-size:11px; color:var(--muted);}
+.wx-now .nw-head b{font-size:13px; color:var(--ink); letter-spacing:.05em;}
+.wx-now .nw-main{font-size:13px; margin:6px 0 2px; display:flex; align-items:baseline; gap:6px;}
+.wx-now .nw-main .ic{font-size:20px;}
+.wx-now .nw-main .t{font-size:22px; font-family:var(--fnum); font-weight:700;}
+.wx-now .nw-sub{font-size:11.5px; color:var(--muted);}
+.wx-now .nw-warn{font-size:12.5px; color:var(--amber); margin-top:6px; line-height:1.65;}
+.wx-now .nw-win{font-size:12.5px; color:var(--teal); margin-top:5px; line-height:1.65;}
+.wx-now .nw-fun{font-size:12.5px; color:#8e5aa2; margin-top:5px; line-height:1.65;}
+.wx-live{font-size:11px; color:var(--teal); cursor:pointer; text-decoration:underline;}
+.wx-live.off{color:var(--muted); text-decoration:none;}
+.fun-bar{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:2px 0 10px;}
+.fun-sel{flex:1;min-width:150px;padding:8px 9px;border:1px solid var(--line);border-radius:8px;font:inherit;color:inherit;background:transparent;}
 .verdict{border-radius:12px; padding:11px 13px; margin-top:12px; font-size:14px; border-left:4px solid transparent;}
 .verdict.A{background:var(--teal-lt); color:var(--teal); border-left-color:var(--teal);}
 .verdict.B{background:var(--amber-lt); color:var(--amber); border-left-color:var(--amber);}
@@ -302,7 +328,9 @@ section.on{display:block;}
     <div class="map-bar">
       <button class="btn" onclick="locateMe()"><span>定位我</span><span class="b-ic">📍</span></button>
       <button class="btn ghost" onclick="fitAll()"><span>全程总览</span><span class="b-ic">⤢</span></button>
+      <button class="btn ghost" id="trafBtn" onclick="toggleTraffic()"><span>实时路况</span><span class="b-ic">🚦</span></button>
     </div>
+    <div class="traf-tip" id="trafTip"><i style="background:#c0513f"></i>拥堵 <i style="background:#b8791f"></i>缓行 <i style="background:#2f6f5e"></i>畅通 · 高德实时路况叠加在底图上,随官方路网数据自动刷新(每 3 分钟)。<span id="trafTime"></span></div>
     <div class="map-shell"><div id="map"></div></div>
     <div class="scard" id="legInfoWrap" style="display:none"><div class="sc-core" id="legInfo"></div></div>
     <div class="map-hint" id="nearTxt">点地图任意位置可手动设置“我在哪”;点任意路段可查看该段距离和沿途站点。</div>
@@ -321,12 +349,13 @@ section.on{display:block;}
         <button class="rf on" data-c="地" onclick="rfToggle(this)">地</button>
         <button class="rf on" data-c="科" onclick="rfToggle(this)">科</button>
         <button class="rf route on" data-c="route" onclick="rfToggle(this)">顺路</button>
+        <button class="rf fun" data-c="fun" onclick="rfToggle(this)">⭐好玩</button>
       </div>
       <div class="radar-actions">
         <button class="btn sm" onclick="aiScan(false)"><span>AI 深度扫描</span><span class="b-ic">✦</span></button>
         <button class="btn sm ghost" onclick="runRadar()"><span>重扫本区</span></button>
       </div>
-      <div class="dim" id="radarStatus">定位后,自动扫描周围 100 公里的文史地科点位…</div>
+      <div class="dim" id="radarStatus">定位后,自动扫描周围 100 公里的文史地科点位;点「⭐好玩」按可玩性排序…</div>
       <div id="radarList"></div>
       <div id="aiKeyBox" class="ai-key" style="display:none">
         <div class="dim">首次使用 AI 扫描需粘贴 DeepSeek API Key(仅保存在本机浏览器,可在 DeepSeek 后台随时吊销):</div>
@@ -348,9 +377,27 @@ section.on{display:block;}
 
     <div class="scard"><div class="sc-core">
       <h3>天气与方案决策<span class="en">Open-Meteo 实时预报</span></h3>
-      <div class="dim" style="margin-bottom:8px">每次打开自动联网更新 · <span id="wxTime"></span> · <a style="color:var(--teal);cursor:pointer;text-decoration:underline" onclick="loadWeather()">立即刷新</a></div>
+      <div class="dim" style="margin-bottom:8px">每次打开自动联网更新 · <span id="wxTime"></span> · <a style="color:var(--teal);cursor:pointer;text-decoration:underline" onclick="loadWeather()">立即刷新</a> · <a id="wxLiveBtn" class="wx-live off" onclick="toggleWxLive()">实时监测</a></div>
+      <div id="wxNow"><div class="skl" style="height:52px;margin-bottom:10px"></div></div>
       <div id="wxBox"><div class="skl" style="height:16px;width:38%;margin-bottom:8px"></div><div class="skl" style="height:66px;margin-bottom:10px"></div><div class="skl" style="height:16px;width:30%;margin-bottom:8px"></div><div class="skl" style="height:66px"></div></div>
       <div id="wxVerdict"></div>
+    </div></div>
+
+    <div class="scard"><div class="sc-core">
+      <h3>附近有什么好玩的<span class="en">给一个定位 · 按可玩性排</span></h3>
+      <div class="dim" style="margin-bottom:8px">用手机定位,或临时挑一个城市当圆心,它会按「可玩性」(科学&gt;地理&gt;人文/历史,越近越优,顺路加分)列出周围 100km 内值得玩的点。</div>
+      <div class="fun-bar">
+        <button class="btn sm" onclick="funLocate()"><span>用我的定位</span><span class="b-ic">📍</span></button>
+        <select id="funCity" class="fun-sel" onchange="findFun()"></select>
+        <button class="btn sm ghost" onclick="findFun()"><span>找附近好玩的</span><span class="b-ic">🎡</span></button>
+      </div>
+      <div id="funList" class="dim">还没定位。点「用我的定位」,或挑一个城市,就会列出附近值得玩的点。</div>
+    </div></div>
+
+    <div class="scard"><div class="sc-core">
+      <h3>哪里人多 · 人流预报<span class="en">估算 · 非实时</span></h3>
+      <div class="dim" style="margin-bottom:8px">景区实时人流暂无免费接口,这里按「工作日·周末·假期 + 当天当地天气」估算冷热:红色日子热门景点尽量改室内或错峰,绿色相对好走。想看实时的,去「地图」页开“实时路况”,每 3 分钟自动刷新。</div>
+      <div id="crowdBox"><div class="skl" style="height:16px;width:42%;margin-bottom:8px"></div><div class="skl" style="height:54px"></div></div>
     </div></div>
 
     <div class="scard"><div class="sc-core">
@@ -676,6 +723,7 @@ function setMe(lat,lng,manual){
   map.setView([mlat,mlng],Math.max(map.getZoom(),8));}
  reportNearest(wlat,wlng);
  runRadar();
+ if(typeof findFun==='function')findFun();
 }
 function reportNearest(lat,lng){
  var best=null,bd=1e9;
@@ -722,20 +770,185 @@ function loadRoads(){
  next();
 }
 
+/* ============ 实时路况(高德路况瓦片 · 无需 Key) ============ */
+var trafficLayer=null,trafficOn=false,trafTimer=null,TRAF_MS=180000,TRAF_URL='https://tm.amap.com/trafficengine/mapabc/traffictile?v=1.0&t=1&x={x}&y={y}&z={z}';
+function trafStamp(){
+ var tt=document.getElementById('trafTime');if(!tt)return;
+ var n=new Date();
+ tt.textContent=' 更新于 '+('0'+(n.getMonth()+1)).slice(-2)+'.'+('0'+n.getDate()).slice(-2)+' '+('0'+n.getHours()).slice(-2)+':'+('0'+n.getMinutes()).slice(-2);
+}
+function trafRefresh(){
+ if(!trafficOn||!trafficLayer||!map)return;
+ trafficLayer.setUrl(TRAF_URL+'&_='+new Date().getTime());
+ trafStamp();
+}
+function trafStop(){
+ if(trafTimer!=null&&typeof clearInterval!=='undefined')clearInterval(trafTimer);
+ trafTimer=null;
+}
+function toggleTraffic(){
+ if(typeof L==='undefined'||!map){setNear('地图组件还没就绪(需联网加载),暂时看不了实时路况。');return;}
+ if(!trafficLayer){trafficLayer=L.tileLayer(TRAF_URL,{minNativeZoom:6,maxNativeZoom:18,maxZoom:18,opacity:.85,errorTileUrl:'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7',attribution:'实时路况 © 高德'});}
+ trafficOn=!trafficOn;
+ if(trafficOn){
+  trafficLayer.addTo(map);
+  trafRefresh();
+  if(typeof setInterval!=='undefined'){trafStop();trafTimer=setInterval(trafRefresh,TRAF_MS);}
+ }else{
+  trafStop();
+  map.removeLayer(trafficLayer);
+ }
+ var b=document.getElementById('trafBtn');
+ if(b){b.classList.toggle('on',trafficOn);var s=b.querySelector('span');if(s)s.textContent=trafficOn?'关闭路况':'实时路况';}
+ var tip=document.getElementById('trafTip');
+ if(tip)tip.classList.toggle('show',trafficOn);
+}
+
+/* ============ 人流预报(日历 + 天气估算) ============ */
+var WXDATA=null;
+var HOL_MD={'1-1':'元旦','5-1':'劳动节','5-2':'劳动节','5-3':'劳动节','10-1':'国庆','10-2':'国庆','10-3':'国庆','10-4':'国庆','10-5':'国庆','10-6':'国庆','10-7':'国庆'};
+var CROWD_LV=[{t:'高',c:'#c0513f'},{t:'中',c:'#b8791f'},{t:'低',c:'#2f6f5e'}];
+function nearestWxCity(lat,lng){
+ var best=null,bd=1e9;
+ WX_CITIES.forEach(function(c){var d=hav({lat:lat,lng:lng},{lat:c.lat,lng:c.lng});if(d<bd){bd=d;best=c;}});
+ return best;
+}
+function wxForDay(ds,anchorKey){
+ if(!WXDATA||!WXDATA.length)return null;
+ var a=anchorKey?ANCHORS[anchorKey]:null;
+ var city=a?nearestWxCity(a.lat,a.lng):null;
+ for(var ci=0;ci<WXDATA.length;ci++){
+  var c=WXDATA[ci],nm=WX_CITIES[ci]?WX_CITIES[ci].name:'';
+  if(city&&nm&&nm!==city.name)continue;
+  var d=c.daily;if(!d||!d.time)continue;
+  var i=d.time.indexOf(ds);
+  if(i>=0)return {code:d.weathercode?d.weathercode[i]:null,tmax:d.temperature_2m_max?d.temperature_2m_max[i]:null,prob:d.precipitation_probability_max?d.precipitation_probability_max[i]:null};
+ }
+ return null;
+}
+function crowdOf(dt,wx){
+ var s=0,tags=[],m=dt.getMonth()+1;
+ if(m>=7&&m<=8){s+=1;tags.push('暑假');}
+ else if(m===1||m===2){s+=1;tags.push('寒假');}
+ var h=HOL_MD[m+'-'+dt.getDate()];if(h){s+=2;tags.push(h);}
+ var dow=dt.getDay();
+ if(dow===0||dow===6){s+=1;tags.push('周末');}else{tags.push('工作日');}
+ if(wx){if(wx.prob!=null&&wx.prob>=60){s-=1;tags.push('有雨·户外人少');}else if(wx.code===0&&wx.tmax!=null&&wx.tmax>=33){tags.push('晴热·午后人多');}}
+ var lv=s>=2?0:(s>=1?1:2);
+ return {lv:lv,tags:tags};
+}
+function renderCrowd(){
+ var box=document.getElementById('crowdBox');if(!box)return;
+ if(!DAYS||!DAYS.length){box.innerHTML='<div class="dim">本行程没有可估算的日期。</div>';return;}
+ var html='';
+ DAYS.forEach(function(d){
+  if(!d.full)return;
+  var dt=new Date(d.full+'T00:00:00');
+  var c=crowdOf(dt,wxForDay(d.full,d.anchor)),lv=CROWD_LV[c.lv];
+  html+='<div class="crowd-row"><span class="crowd-dot" style="background:'+lv.c+'">'+lv.t+'</span>'+
+   '<span class="crowd-date">'+(dt.getMonth()+1)+'.'+dt.getDate()+' '+(d.wd||'')+'</span>'+
+   '<span class="crowd-main"><b>D'+d.n+' '+d.title+'</b><div class="crowd-why">'+c.tags.join(' · ')+'</div></span></div>';
+ });
+ html+='<div class="dim" style="margin-top:10px">此表是估算:红色=大概率人多(热门景点尽量排室内或错峰),绿色=相对好走。路上堵不堵是实时的——去「地图」页点“实时路况”,每 3 分钟自动刷新。</div>';
+ box.innerHTML=html;
+}
+
 /* ============ 天气与方案决策 ============ */
 var WXC={0:'☀️',1:'🌤',2:'⛅',3:'☁️',45:'🌫',48:'🌫',51:'🌦',53:'🌦',55:'🌦',61:'🌧',63:'🌧',65:'🌧',66:'🌧',67:'🌧',71:'❄️',73:'❄️',75:'❄️',77:'❄️',80:'🌦',81:'🌦',82:'🌧',95:'⛈',96:'⛈',99:'⛈'};
 function wxIcon(c){return WXC[c]||'·';}
+/* ---- 实时此刻 + 今日推荐外出时段(逐小时) ---- */
+function todayAnchorCity(){
+ var t=new Date(),ds=t.getFullYear()+'-'+('0'+(t.getMonth()+1)).slice(-2)+'-'+('0'+t.getDate()).slice(-2);
+ var a=null;if(DAYS)DAYS.forEach(function(d){if(d.full===ds&&d.anchor)a=d.anchor;});
+ if(a&&ANCHORS[a])return nearestWxCity(ANCHORS[a].lat,ANCHORS[a].lng);
+ return WX_CITIES&&WX_CITIES.length?WX_CITIES[0]:null;
+}
+function hourLabel(hm){return hm.slice(11,16);}
+function bestWindow(h,from){
+ if(!h||!h.time)return null;
+ var si=-1;for(var i=0;i<h.time.length;i++){if(new Date(h.time[i])>=from){si=i;break;}}
+ if(si<0)return null;
+ var best=null,end=Math.min(h.time.length-3,si+30);
+ for(var s=si;s<=end;s++){
+  var prob=0,tlo=1e9,thi=-1e9;
+  for(var k=0;k<3;k++){var p=h.precipitation_probability?h.precipitation_probability[s+k]:null;if(p!=null&&p>prob)prob=p;var tp=h.temperature_2m?h.temperature_2m[s+k]:null;if(tp!=null){if(tp<tlo)tlo=tp;if(tp>thi)thi=tp;}}
+  if(thi<0)return null;
+  var sc=prob*3+Math.max(0,Math.abs((tlo+thi)/2-24)-4)*8;   // 雨越少、越贴近24°C越好
+  if(!best||sc<best.sc)best={i:s,prob:prob,tlo:tlo,thi:thi,sc:sc};
+ }
+ return best;
+}
+function wxWarn(h,cur,from){
+ var out=[];
+ if(h&&h.time)for(var i=0;i<h.time.length;i++){
+  var dt=new Date(h.time[i]);if(dt<from||dt.getTime()-from.getTime()>12*3600*1000)continue;
+  var p=h.precipitation_probability?h.precipitation_probability[i]:null;
+  var tp=h.temperature_2m?h.temperature_2m[i]:null;
+  if(p!=null&&p>=70&&out.indexOf('rain')<0)out.push('rain');
+  if(tp!=null&&tp>=35&&out.indexOf('heat')<0)out.push('heat');
+  if(tp!=null&&tp<=3&&out.indexOf('cold')<0)out.push('cold');
+ }
+ if(cur&&cur.wind_speed_10m!=null&&cur.wind_speed_10m>=10.8)out.push('wind');
+ return out;
+}
+function renderWxNow(arr){
+ var box=document.getElementById('wxNow');if(!box)return;
+ var ref=todayAnchorCity();if(!ref){box.innerHTML='';return;}
+ var ci=-1;for(var i=0;i<WX_CITIES.length;i++){if(WX_CITIES[i].lat===ref.lat&&WX_CITIES[i].lng===ref.lng){ci=i;break;}}
+ var c=ci>=0?arr[ci]:null;if(!c){box.innerHTML='';return;}
+ var cur=c.current,now=new Date();
+ var html='<div class="wx-now"><div class="nw-head"><b>此刻 · '+WX_CITIES[ci].name+'</b><span>实时实况</span></div>';
+ if(cur){
+  html+='<div class="nw-main"><span class="ic">'+wxIcon(cur.weathercode)+'</span><span class="t">'+Math.round(cur.temperature_2m)+'°</span><span class="nw-sub">体感 '+Math.round(cur.apparent_temperature)+'° · 湿度 '+(cur.relative_humidity_2m!=null?Math.round(cur.relative_humidity_2m)+'%':'—')+' · 风 '+(cur.wind_speed_10m!=null?cur.wind_speed_10m.toFixed(1)+'m/s':'—')+'</span></div>';
+ }else{
+  html+='<div class="nw-sub">此刻实况获取中(需联网)。</div>';
+ }
+ var bw=bestWindow(c.hourly,now);
+ if(bw)html+='<div class="nw-win">✅ 今日推荐外出:'+hourLabel(c.hourly.time[bw.i])+'–'+hourLabel(c.hourly.time[bw.i+2])+'(雨概率 '+bw.prob+'% · '+Math.round(bw.tlo)+'–'+Math.round(bw.thi)+'°C)</div>';
+ var fme=state&&state.me?state.me:{lat:ref.lat,lng:ref.lng};
+ var ftop=funTop(fme,1);
+ if(ftop.length)html+='<div class="nw-fun">🎡 最值得玩:'+ftop[0].n+'('+ftop[0].c+' · '+(ftop[0].d<1?'就在附近':ftop[0].d.toFixed(0)+'km')+') · 去「地图」页定位可捡漏更多</div>';
+ var ws=wxWarn(c.hourly,cur,now),wmap={rain:'未来12小时有较强降水(雨概率≥70%),山路/长途谨慎,优先室内',heat:'有高温(≥35°),户外排早晚、正午避暑',cold:'有低温(≤3°),早晚加衣、山区注意保暖',wind:'风力偏大,高海拔/索道留意安全'};
+ if(ws.length)html+='<div class="nw-warn">⚠️ '+ws.map(function(k){return wmap[k];}).join(';')+'。</div>';
+ html+='</div>';
+ box.innerHTML=html;
+}
+/* ---- 实时监测:按固定间隔自动重取,可停 ---- */
+var WX_MS=600000,wxTimer=null,wxOn=false;
+function wxStop(){
+ if(wxTimer!=null&&typeof clearInterval!=='undefined')clearInterval(wxTimer);
+ wxTimer=null;
+}
+function wxLiveUI(){
+ var b=document.getElementById('wxLiveBtn');if(!b)return;
+ b.textContent=wxOn?'● 监测中':'实时监测';
+ b.className='wx-live'+(wxOn?'':' off');
+}
+function wxStart(){
+ wxOn=true;wxStop();
+ if(typeof setInterval!=='undefined')wxTimer=setInterval(loadWeather,WX_MS);
+ wxLiveUI();
+}
+function toggleWxLive(){
+ if(wxOn){wxOn=false;wxStop();var t=document.getElementById('wxTime');if(t&&t.textContent)t.textContent=t.textContent.replace(/ · 监测中.*$/,'');}
+ else{wxStart();loadWeather();}
+ wxLiveUI();
+}
 function loadWeather(){
  var lats=WX_CITIES.map(function(c){return c.lat;}).join(',');
  var lngs=WX_CITIES.map(function(c){return c.lng;}).join(',');
- var url='https://api.open-meteo.com/v1/forecast?latitude='+lats+'&longitude='+lngs+'&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_probability_max,precipitation_sum&timezone=Asia%2FShanghai&forecast_days=16';
+ var url='https://api.open-meteo.com/v1/forecast?latitude='+lats+'&longitude='+lngs+'&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_probability_max,precipitation_sum&current=temperature_2m,apparent_temperature,relative_humidity_2m,weathercode,wind_speed_10m,precipitation&hourly=temperature_2m,precipitation_probability,weathercode&timezone=Asia%2FShanghai&forecast_days=16';
  fetch(url).then(function(r){return r.json();}).then(function(data){
   var arr=Array.isArray(data)?data:[data];
-  renderWx(arr);
+  WXDATA=arr;renderWx(arr);renderCrowd();
   var now=new Date();
-  document.getElementById('wxTime').textContent='更新于 '+(now.getMonth()+1)+'.'+now.getDate()+' '+('0'+now.getHours()).slice(-2)+':'+('0'+now.getMinutes()).slice(-2);
+  if(!wxOn)wxStart();
+  var stamp='实时更新于 '+(now.getMonth()+1)+'.'+now.getDate()+' '+('0'+now.getHours()).slice(-2)+':'+('0'+now.getMinutes()).slice(-2);
+  if(wxOn)stamp+=' · 监测中(每 '+Math.round(WX_MS/60000)+' 分钟)';
+  document.getElementById('wxTime').textContent=stamp;
  }).catch(function(){
   document.getElementById('wxBox').textContent=WX_RULES?WX_RULES.failText:'天气获取失败(需联网)。';
+  var nwb=document.getElementById('wxNow');if(nwb)nwb.textContent='';
  });
 }
 function renderWx(arr){
@@ -748,12 +961,13 @@ function renderWx(arr){
   for(var i=0;i<d.time.length&&shown<7;i++){
    var dt=new Date(d.time[i]+'T00:00:00');
    if(dt<today)continue;
-   html+='<div class="wx-day"><span class="ic">'+wxIcon(d.weathercode[i])+'</span>'+(dt.getMonth()+1)+'.'+dt.getDate()+'<br>'+Math.round(d.temperature_2m_min[i])+'–'+Math.round(d.temperature_2m_max[i])+'°'+((d.precipitation_probability_max&&d.precipitation_probability_max[i]!=null)?'<br>💧'+d.precipitation_probability_max[i]+'%':'')+'</div>';
+   html+='<div class="wx-day"><span class="ic">'+wxIcon(d.weathercode[i])+'</span>'+(dt.getMonth()+1)+'.'+dt.getDate()+'<br>'+Math.round(d.temperature_2m_min[i])+'–'+Math.round(d.temperature_2m_max[i])+'°'+((d.precipitation_probability_max&&d.precipitation_probability_max[i]!=null)?'<br>💧'+d.precipitation_probability_max[i]+'%':'')+((d.temperature_2m_max&&d.temperature_2m_max[i]!=null&&d.temperature_2m_max[i]>=35)?' 🥵':'')+'</div>';
    shown++;
   }
   html+='</div></div>';
  });
  document.getElementById('wxBox').innerHTML=html;
+ renderWxNow(arr);
  var roleIdx={};WX_CITIES.forEach(function(c,ci){if(c.role)roleIdx[c.role]=ci;});
  var mets={};Object.keys(roleIdx).forEach(function(opt){mets[opt]=flexMetrics(arr[roleIdx[opt]]);});
  var box=document.getElementById('wxVerdict');
@@ -860,7 +1074,7 @@ function renderToday(){
 /* ============ 文史地雷达 ============ */
 var CAT_STYLE={'文':{color:'#8e5aa2'},'史':{color:'#c0513f'},'地':{color:'#2f6f5e'},'科':{color:'#35608f'}};
 var radarMarks=[],radarCircles=[],radarData=[];
-var rfCats={'文':true,'史':true,'地':true,'科':true},rfRoute=true;
+var rfCats={'文':true,'史':true,'地':true,'科':true},rfRoute=true,rfFun=false;
 function allRadarPoints(){
  var base=POIS.map(function(p){return {n:p.name,c:p.cat,lat:p.lat,lng:p.lng,info:p.info,q:p.q,src:'curated'};}).filter(function(p){return !state.skip.pois[p.n];});
  var extra=RADAR_EXTRA.map(function(p){return {n:p.n,c:p.c,lat:p.lat,lng:p.lng,info:p.info,q:p.q,src:'curated'};}).filter(function(p){return !state.skip.pois[p.n];});
@@ -879,9 +1093,61 @@ function nearRoute(p,maxKm){
  ALL_LEGS.forEach(function(l){var ll=legLatLngs(l.id,l.keys);for(var i=0;i<ll.length;i++){var d=hav({lat:g[0],lng:g[1]},{lat:ll[i][0],lng:ll[i][1]});if(d<best)best=d;}});
  return best<=maxKm;
 }
+/* ---- 可玩性评分:分类权重 + 距离越近越优 + 顺路加分 ---- */
+var FUN_W={'科':5,'地':4,'文':3,'史':3};
+function funScore(p,me){
+ var w=FUN_W[p.c]||3,d=me?hav(me,{lat:p.lat,lng:p.lng}):0,s=w*20-d*0.8;
+ if(ALL_LEGS&&ALL_LEGS.length&&nearRoute(p,AI_CFG?AI_CFG.routeKm:20))s+=15;
+ return Math.round(s);
+}
+function funTop(me,n){
+ if(!me)return [];
+ var R=AI_CFG?AI_CFG.radiusKm:100;
+ var pts=allRadarPoints().map(function(p){var d=hav(me,{lat:p.lat,lng:p.lng});
+  return {n:p.n,c:p.c,lat:p.lat,lng:p.lng,info:p.info,q:p.q,d:d,score:funScore(p,me)};})
+  .filter(function(p){return p.d<=R;});
+ pts.sort(function(a,b){return b.score-a.score||a.d-b.d;});
+ return pts.slice(0,n||6);
+}
+/* ---- 附近好玩的:给一个定位(我的定位/临时城市),按可玩性排序列出 ---- */
+var funData=[];
+function initFunCity(){
+ var sel=document.getElementById('funCity');if(!sel||!ANCHORS)return;
+ var opts='<option value="">临时定位:挑一个城市…</option>';
+ Object.keys(ANCHORS).forEach(function(k){opts+='<option value="'+k+'">'+ANCHORS[k].name+'</option>';});
+ sel.innerHTML=opts;
+}
+function funLocate(){
+ var sel=document.getElementById('funCity');if(sel)sel.value='';
+ locateMe();
+}
+function funRef(){
+ var sel=document.getElementById('funCity'),k=sel?sel.value:'';
+ if(k&&ANCHORS[k]){var a=ANCHORS[k];return {me:{lat:a.lat,lng:a.lng},src:a.name};}
+ if(state.me)return {me:state.me,src:'我的定位'};
+ return null;
+}
+function findFun(){
+ var box=document.getElementById('funList');if(!box)return;
+ var r=funRef();
+ if(!r){box.innerHTML='<div class="dim">先点「用我的定位」,或在上面的下拉里挑一个城市。</div>';return;}
+ var tops=funTop(r.me,8);funData=tops;
+ if(!tops.length){box.innerHTML='<div class="dim">'+r.src+' 周围 '+AI_CFG.radiusKm+' 公里内暂时没有可玩点。</div>';return;}
+ var html='<div class="dim" style="margin-bottom:4px">圆心:<b>'+r.src+'</b> · '+AI_CFG.radiusKm+'km 内 · 按可玩性排序(点一行可在地图上看)</div>';
+ tops.forEach(function(p,i){
+  html+='<div class="r-item" data-n="'+p.n+'" onclick="zoomFunPoint('+i+')"><span class="r-cat" style="background:#8e5aa2">🎡</span><div class="r-main"><b>'+p.n+'<span class="r-ai">⭐'+p.score+'</span></b><p>'+p.info+'</p></div><span class="r-dist">'+(p.d<1?'就在附近':p.d.toFixed(0)+'km')+'<br>'+p.c+'</span></div>';
+ });
+ box.innerHTML=html;
+}
+function zoomFunPoint(i){
+ var p=funData[i];if(!p)return;
+ showTab(3);
+ if(map){var g=wgs2gcj(p.lat,p.lng);map.setView(g,Math.max(map.getZoom(),9));}
+}
 function rfToggle(el){
  var c=el.getAttribute('data-c');
  if(c==='route'){rfRoute=!rfRoute;el.classList.toggle('on',rfRoute);}
+ else if(c==='fun'){rfFun=!rfFun;el.classList.toggle('on',rfFun);}
  else{rfCats[c]=!rfCats[c];el.classList.toggle('on',rfCats[c]);}
  runRadar();
 }
@@ -901,18 +1167,20 @@ function runRadar(){
    return {n:p.n,c:p.c,lat:p.lat,lng:p.lng,info:p.info,q:p.q,src:p.src,d:d,dir:bearing8(c0,{lat:p.lat,lng:p.lng})};
   }).filter(function(p){return p.d<=AI_CFG.radiusKm&&rfCats[p.c];});
  if(rfRoute)pts=pts.filter(function(p){return nearRoute(p,AI_CFG.routeKm);});
- pts.sort(function(a,b){return a.d-b.d;});
+ pts.forEach(function(p){p.score=funScore(p,c0);});
+ if(rfFun)pts.sort(function(a,b){return b.score-a.score||a.d-b.d;});
+ else pts.sort(function(a,b){return a.d-b.d;});
  radarData=pts;
  var html='';
  pts.forEach(function(p,i){
   if(map){var g2=wgs2gcj(p.lat,p.lng);
    radarMarks.push(L.circleMarker(g2,{radius:5,color:'#fff',weight:1.5,fillColor:CAT_STYLE[p.c].color,fillOpacity:.95}).addTo(map)
     .bindPopup('<b>'+p.n+'</b> <span style="color:#7a746a">'+p.c+' · '+p.d.toFixed(0)+'km '+p.dir+(p.src==='ai'?' · AI':'' )+'</span><br>'+p.info+(p.q?'<br><i>想一想:'+p.q+'</i>':'')));}
-  html+='<div class="r-item" data-n="'+p.n+'" onclick="radarZoom('+i+');openPoi(this.dataset.n)"><span class="r-cat" style="background:'+CAT_STYLE[p.c].color+'">'+p.c+'</span><div class="r-main"><b>'+p.n+(p.src==='ai'?'<span class="r-ai">AI</span>':'')+'</b><p>'+p.info+'</p>'+(p.q?'<p class="r-q">想一想:'+p.q+'</p>':'')+'</div><span class="r-dist">'+p.d.toFixed(0)+'km<br>'+p.dir+'</span></div>';
+  html+='<div class="r-item" data-n="'+p.n+'" onclick="radarZoom('+i+');openPoi(this.dataset.n)"><span class="r-cat" style="background:'+CAT_STYLE[p.c].color+'">'+p.c+'</span><div class="r-main"><b>'+p.n+(p.src==='ai'?'<span class="r-ai">AI</span>':'')+(rfFun?'<span class="r-ai">⭐'+p.score+'</span>':'')+'</b><p>'+p.info+'</p>'+(p.q?'<p class="r-q">想一想:'+p.q+'</p>':'')+'</div><span class="r-dist">'+p.d.toFixed(0)+'km<br>'+p.dir+'</span></div>';
  });
  listEl.innerHTML=html||'<div class="dim">'+AI_CFG.radiusKm+' 公里内没有匹配点位(试试关闭“顺路”或换个分类)。</div>';
  var cnt=function(cc){return pts.filter(function(p){return p.c===cc;}).length;};
- st.innerHTML='圆心:当前位置 · '+AI_CFG.radiusKm+'km 内 <b>'+pts.length+'</b> 个点'+(rfRoute?'(顺路模式)':'')+' · 文'+cnt('文')+' 史'+cnt('史')+' 地'+cnt('地')+' 科'+cnt('科');
+ st.innerHTML='圆心:当前位置 · '+AI_CFG.radiusKm+'km 内 <b>'+pts.length+'</b> 个点'+(rfRoute?'(顺路模式)':'')+(rfFun?'(⭐可玩性排序)':'')+' · 文'+cnt('文')+' 史'+cnt('史')+' 地'+cnt('地')+' 科'+cnt('科');
 }
 function radarZoom(i){var p=radarData[i];if(!p||!map)return;var g=wgs2gcj(p.lat,p.lng);map.setView(g,Math.max(map.getZoom(),9));}
 /* ---- DeepSeek AI 深度扫描 ---- */
@@ -1751,7 +2019,7 @@ function validatePack(p){
 }
 function startApp(){
   renderTimeline();renderCulture();updateProgress();renderBooks();renderToday();
-  initMap();loadWeather();loadRoads();riseScan();showTab(1);
+  renderCrowd();initMap();loadWeather();loadRoads();riseScan();initFunCity();showTab(1);
 }
 function boot(){
   var trips=load('ta-trips',{}),cur=load('ta-current',null);
